@@ -1,11 +1,10 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// 1. ENDEREÇO DO SEU PROJETO (Conforme identificado no seu print anterior)
+// NOTA: Certifique-se de que estas informações batem com o seu painel do Supabase -> Settings -> API
 const SUPABASE_URL = 'https://rolmywoyffnjujopaqkd.supabase.co'; 
 
-// 2. SUA CHAVE API PÚBLICA (ANON)
-// Esta chave permite que o seu aplicativo se comunique com o banco de dados de forma segura.
+// Importante: Se a sua chave começar com 'sb_publishable', verifique se ela é a chave 'anon/public'
 const SUPABASE_ANON_KEY = 'sb_publishable_7VsRzyXKhPJISXrVsES1AA_aOhZDWjT';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

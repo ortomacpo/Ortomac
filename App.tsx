@@ -1,17 +1,17 @@
 
 import React, { useState, useEffect } from 'react';
-import { AppView, UserRole, Patient, WorkshopOrder, InventoryItem, Appointment, User } from './types';
-import { supabase } from './services/supabaseClient';
-import Sidebar from './components/Sidebar';
-import Dashboard from './components/Dashboard';
-import PatientManagement from './components/PatientManagement';
-import WorkshopManagement from './components/WorkshopManagement';
-import InventoryManagement from './components/InventoryManagement';
-import FinanceDashboard from './components/FinanceDashboard';
-import IndicatorsView from './components/IndicatorsView';
-import AIAssistant from './components/AIAssistant';
-import CalendarView from './components/CalendarView';
-import Login from './components/Login';
+import { AppView, UserRole, Patient, WorkshopOrder, InventoryItem, Appointment, User } from './types.ts';
+import { supabase } from './services/supabaseClient.ts';
+import Sidebar from './components/Sidebar.tsx';
+import Dashboard from './components/Dashboard.tsx';
+import PatientManagement from './components/PatientManagement.tsx';
+import WorkshopManagement from './components/WorkshopManagement.tsx';
+import InventoryManagement from './components/InventoryManagement.tsx';
+import FinanceDashboard from './components/FinanceDashboard.tsx';
+import IndicatorsView from './components/IndicatorsView.tsx';
+import AIAssistant from './components/AIAssistant.tsx';
+import CalendarView from './components/CalendarView.tsx';
+import Login from './components/Login.tsx';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -25,7 +25,13 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const savedUser = localStorage.getItem('ortho_session');
-    if (savedUser) setCurrentUser(JSON.parse(savedUser));
+    if (savedUser) {
+      try {
+        setCurrentUser(JSON.parse(savedUser));
+      } catch (e) {
+        localStorage.removeItem('ortho_session');
+      }
+    }
   }, []);
 
   const fetchData = async () => {
@@ -38,12 +44,14 @@ const App: React.FC = () => {
         supabase.from('inventory').select('*').order('name'),
         supabase.from('appointments').select('*').order('time')
       ]);
+      
+      if (pRes.error) console.error("Erro Pacientes:", pRes.error.message);
       if (pRes.data) setPatients(pRes.data);
       if (oRes.data) setOrders(oRes.data);
       if (iRes.data) setInventory(iRes.data);
       if (aRes.data) setAppointments(aRes.data);
     } catch (error) {
-      console.error("Erro ao carregar dados:", error);
+      console.error("Erro geral de carregamento:", error);
     } finally {
       setIsSyncing(false);
     }
@@ -55,6 +63,7 @@ const App: React.FC = () => {
       const channel = supabase
         .channel('db-changes')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'patients' }, () => fetchData())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'workshop_orders' }, () => fetchData())
         .subscribe();
       return () => { supabase.removeChannel(channel); };
     }
@@ -73,13 +82,19 @@ const App: React.FC = () => {
   const handleSavePatient = async (patient: Patient) => {
     setIsSyncing(true);
     try {
-      // Garantimos que o objeto enviado respeita o esquema snake_case
-      const { error } = await supabase.from('patients').upsert(patient);
-      if (error) throw error;
-      await fetchData(); // Recarrega para garantir sincronia
+      const dataToSave = {
+        ...patient,
+        last_visit: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('patients')
+        .upsert(dataToSave, { onConflict: 'id' });
+
+      if (error) throw new Error(error.message);
+      await fetchData();
     } catch (error: any) {
-      console.error("Erro Supabase:", error);
-      alert("Falha ao salvar no servidor. Verifique se todas as colunas existem no banco.");
+      alert(`FALHA AO SALVAR: ${error.message}`);
     } finally {
       setIsSyncing(false);
     }

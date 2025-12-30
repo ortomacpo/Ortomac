@@ -33,9 +33,31 @@
         }
         .animate-fadeIn { animation: fadeIn 0.4s ease-out forwards; }
 
-        /* Custom Rounded */
         .rounded-2\.5xl { border-radius: 1.25rem; }
+
+        #error-display {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #fff;
+            color: #ef4444;
+            padding: 2rem;
+            z-index: 9999;
+            font-family: monospace;
+            overflow: auto;
+        }
     </style>
+    <script>
+        // Polyfill essencial para evitar erro de "process is not defined" no navegador
+        window.process = { env: { API_KEY: "" } };
+        window.addEventListener('error', function(event) {
+            const display = document.getElementById('error-display');
+            if (display) {
+                display.style.display = 'block';
+                display.innerHTML += `<p><strong>Erro detectado:</strong> ${event.message}</p><pre>${event.error?.stack || ''}</pre>`;
+            }
+        });
+    </script>
 <script type="importmap">
 {
   "imports": {
@@ -52,7 +74,11 @@
 </head>
 <body>
     <div id="root"></div>
-    <!-- CRÍTICO: Linha que carrega o sistema -->
+    <div id="error-display">
+        <h1>Ops! Ocorreu um erro ao carregar o sistema.</h1>
+        <p>Isso geralmente acontece devido a uma falha de conexão ou configuração. Detalhes técnicos abaixo:</p>
+        <hr/>
+    </div>
     <script type="module" src="index.tsx"></script>
 </body>
 </html>
