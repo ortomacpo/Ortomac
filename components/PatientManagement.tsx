@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Patient, ScoliosisEvaluation, UserRole, ClinicalNote, ScoliosisCurve } from '../types';
+import { Patient, ScoliosisEvaluation, UserRole, ClinicalNote, ScoliosisCurve } from '../types.ts';
 
 interface PatientManagementProps {
   userRole: UserRole;
@@ -50,7 +50,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
   const canEdit = [UserRole.GESTOR, UserRole.FISIOTERAPEUTA].includes(userRole);
 
   const filteredPatients = useMemo(() => {
-    return patients.filter(p => {
+    return (patients || []).filter(p => {
       const name = p.name || '';
       const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase());
       const categories = p.categories || [];
@@ -71,8 +71,12 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
 
   const handleSaveNewPatient = async () => {
     setIsSaving(true);
+    
+    // Gerando um UUID real compatível com o PostgreSQL/Supabase
+    const newPatientId = crypto.randomUUID();
+    
     const newPatient: Patient = {
-      id: `P-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+      id: newPatientId,
       name: newPatientData.name,
       phone: newPatientData.phone,
       email: newPatientData.email,
@@ -115,7 +119,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
     if (!selectedPatient || !newNote.trim()) return;
     setIsSaving(true);
     const note: ClinicalNote = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       date: new Date().toISOString(),
       professional: userRole,
       content: newNote,
@@ -128,7 +132,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
     setIsSaving(false);
   };
 
-  const isHighRisk = (degrees: string) => parseInt(degrees) >= 25;
+  const isHighRisk = (degrees: string) => (parseInt(degrees) || 0) >= 25;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[calc(100vh-160px)] animate-fadeIn">
@@ -136,7 +140,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
         <div className="p-6 border-b border-slate-50 space-y-4 bg-slate-50/30">
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base de Pacientes</h3>
-            <span className="bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-lg text-[9px] font-black">{filteredPatients.length} Ativos</span>
+            <span className="bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-lg text-[9px] font-black">{(filteredPatients || []).length} Ativos</span>
           </div>
           <div className="relative">
             <input 
