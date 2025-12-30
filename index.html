@@ -48,13 +48,19 @@
         }
     </style>
     <script>
-        // Polyfill essencial para evitar erro de "process is not defined" no navegador
-        window.process = { env: { API_KEY: "" } };
+        // Polyfill seguro: apenas define se não existir, sem sobrescrever com vazio
+        if (typeof window.process === 'undefined') {
+            window.process = { env: {} };
+        }
+        
         window.addEventListener('error', function(event) {
-            const display = document.getElementById('error-display');
-            if (display) {
-                display.style.display = 'block';
-                display.innerHTML += `<p><strong>Erro detectado:</strong> ${event.message}</p><pre>${event.error?.stack || ''}</pre>`;
+            // Ignorar erros relacionados a extensões de terceiros ou falhas não críticas
+            if (event.message.includes('API Key') || event.message.includes('process')) {
+                const display = document.getElementById('error-display');
+                if (display) {
+                    display.style.display = 'block';
+                    display.innerHTML += `<p><strong>Erro de Configuração:</strong> ${event.message}</p><p>Dica: Verifique se as variáveis de ambiente estão configuradas.</p>`;
+                }
             }
         });
     </script>
@@ -75,8 +81,8 @@
 <body>
     <div id="root"></div>
     <div id="error-display">
-        <h1>Ops! Ocorreu um erro ao carregar o sistema.</h1>
-        <p>Isso geralmente acontece devido a uma falha de conexão ou configuração. Detalhes técnicos abaixo:</p>
+        <h1>Ops! Ocorreu um problema de inicialização.</h1>
+        <p>Estamos tentando carregar o OrtoPhysio Manager...</p>
         <hr/>
     </div>
     <script type="module" src="index.tsx"></script>

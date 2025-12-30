@@ -1,10 +1,18 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+// Criamos uma função auxiliar para obter o cliente apenas quando necessário
+const getClient = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("API_KEY não configurada no ambiente.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 export const getGeminiAnalysis = async (context: string) => {
   try {
+    const ai = getClient();
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: context,
@@ -19,15 +27,16 @@ export const getGeminiAnalysis = async (context: string) => {
         temperature: 0.7,
       }
     });
-    return response.text;
-  } catch (error) {
+    return response.text || "Sem resposta da IA no momento.";
+  } catch (error: any) {
     console.error("Gemini Error:", error);
-    return "Falha na conexão com o Cérebro IA.";
+    return `O Cérebro IA está temporariamente indisponível: ${error.message}`;
   }
 };
 
 export const analyzePatientProgress = async (patientData: any) => {
   try {
+    const ai = getClient();
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-preview",
       contents: `Analise o progresso: ${JSON.stringify(patientData)}`,
@@ -46,6 +55,7 @@ export const analyzePatientProgress = async (patientData: any) => {
     });
     return JSON.parse(response.text || "{}");
   } catch (error) {
+    console.error("Analysis Error:", error);
     return null;
   }
 }
