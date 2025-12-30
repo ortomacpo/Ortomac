@@ -56,11 +56,21 @@ const App: React.FC = () => {
   useEffect(() => {
     if (currentUser) {
       fetchData();
+      
+      // Sincronização em Tempo Real (Escuta mudanças de outros computadores)
       const channel = supabase
         .channel('db-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'patients' }, () => fetchData())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => fetchData())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'patients' }, (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setPatients(prev => [payload.new as Patient, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            setPatients(prev => prev.map(p => p.id === payload.new.id ? payload.new as Patient : p));
+          } else if (payload.eventType === 'DELETE') {
+            setPatients(prev => prev.filter(p => p.id !== payload.old.id));
+          }
+        })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'workshop_orders' }, () => fetchData())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => fetchData())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => fetchData())
         .subscribe();
 
@@ -78,10 +88,27 @@ const App: React.FC = () => {
     localStorage.removeItem('ortho_session');
   };
 
-  const handleUpdatePatients = async (newPatients: Patient[]) => {
-    setPatients(newPatients);
-    const lastPatient = newPatients.find(p => !patients.some(op => op.id === p.id && JSON.stringify(op) === JSON.stringify(p)));
-    if (lastPatient) await supabase.from('patients').upsert(lastPatient);
+  // NOVA LÓGICA DE SALVAMENTO: Explícita e robusta
+  const handleSavePatient = async (patient: Patient) => {
+    setIsSyncing(true);
+    try {
+      const { error } = await supabase.from('patients').upsert(patient);
+      if (error) throw error;
+      
+      // Atualiza estado local imediatamente para feedback rápido
+      setPatients(prev => {
+        const exists = prev.find(p => p.id === patient.id);
+        if (exists) {
+          return prev.map(p => p.id === patient.id ? patient : p);
+        }
+        return [patient, ...prev];
+      });
+    } catch (error: any) {
+      console.error("Erro Supabase:", error);
+      alert("Falha ao salvar no servidor: " + (error.message || "Erro desconhecido"));
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   if (!currentUser) return <Login onLogin={handleLogin} />;
@@ -90,7 +117,7 @@ const App: React.FC = () => {
     const role = currentUser.role;
     switch (currentView) {
       case AppView.DASHBOARD: return <Dashboard onViewChange={setCurrentView} patients={patients} orders={orders} appointments={appointments} />;
-      case AppView.PATIENTS: return <PatientManagement userRole={role} patients={patients} onUpdatePatients={handleUpdatePatients} />;
+      case AppView.PATIENTS: return <PatientManagement userRole={role} patients={patients} onSavePatient={handleSavePatient} />;
       case AppView.WORKSHOP: return <WorkshopManagement userRole={role} orders={orders} onUpdateOrders={setOrders} />;
       case AppView.INVENTORY: return <InventoryManagement items={inventory} onUpdateInventory={setInventory} />;
       case AppView.FINANCES: return role !== UserRole.GESTOR ? <AccessRestricted /> : <FinanceDashboard />;
@@ -119,7 +146,7 @@ const App: React.FC = () => {
             <div className="flex items-center gap-2 mt-2">
               <span className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-indigo-500 animate-pulse' : 'bg-emerald-500'}`}></span>
               <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                {isSyncing ? "Sincronizando com a Nuvem..." : "Sistema Online & Seguro"}
+                {isSyncing ? "Sincronizando Nuvem..." : "Dados Sincronizados"}
               </p>
             </div>
           </div>
@@ -128,10 +155,6 @@ const App: React.FC = () => {
              <div className="hidden md:flex bg-white p-1 rounded-2xl border border-slate-200 shadow-sm mr-2">
                 <button onClick={() => setCurrentView(AppView.PATIENTS)} className="p-2 hover:bg-slate-50 rounded-xl transition-all" title="Novo Paciente">
                    <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4"/></svg>
-                </button>
-                <div className="w-px h-8 bg-slate-100 mx-1 self-center"></div>
-                <button onClick={() => setCurrentView(AppView.CALENDAR)} className="p-2 hover:bg-slate-50 rounded-xl transition-all" title="Agenda">
-                   <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 </button>
              </div>
              
@@ -158,9 +181,8 @@ const App: React.FC = () => {
 const AccessRestricted = () => (
   <div className="h-[60vh] flex flex-col items-center justify-center p-12 bg-white rounded-[3rem] border-2 border-dashed border-slate-100 text-center">
     <div className="w-20 h-20 bg-rose-50 rounded-3xl flex items-center justify-center text-rose-600 text-3xl mb-6">🔒</div>
-    <h3 className="text-xl font-black text-slate-800 mb-2 uppercase tracking-tighter">Área de Acesso Restrito</h3>
-    <p className="text-sm text-slate-400 max-w-xs font-medium">Apenas gestores da OrtoPhysio podem acessar o módulo estratégico e financeiro.</p>
-    <button onClick={() => window.location.reload()} className="mt-8 px-8 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-slate-200">Voltar ao Painel</button>
+    <h3 className="text-xl font-black text-slate-800 mb-2 uppercase tracking-tighter">Acesso Restrito</h3>
+    <p className="text-sm text-slate-400 max-w-xs font-medium">Módulo exclusivo para Gestores Ortomac.</p>
   </div>
 );
 
