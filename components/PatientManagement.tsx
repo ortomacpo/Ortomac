@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Patient, ScoliosisEvaluation, UserRole, WaitingStatus, ClinicalNote, ScoliosisCurve } from '../types';
+import { Patient, ScoliosisEvaluation, UserRole, ClinicalNote, ScoliosisCurve } from '../types';
 
 interface PatientManagementProps {
   userRole: UserRole;
@@ -16,24 +16,47 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
   const [activeTab, setActiveTab] = useState<FilterCategory>('Todos');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [activeSection, setActiveSection] = useState<DetailSection>('Geral');
+  
+  // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
+  const [addStep, setAddStep] = useState(1);
   const [showEvalModal, setShowEvalModal] = useState(false);
   const [newNote, setNewNote] = useState('');
 
-  // Form State para Avaliação de Escoliose
+  // Enhanced Form state for new patient
+  const [newPatientData, setNewPatientData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    birthDate: '',
+    gender: 'M',
+    condition: '',
+    categories: [] as string[],
+    // Anamnese Básica Inicial
+    mainComplaint: '',
+    history: '',
+    physicalActivity: { type: '', frequency: '', duration: '' },
+    habits: ''
+  });
+
   const [evalForm, setEvalForm] = useState<ScoliosisEvaluation>({
     curves: [{ type: 'Torácica', degrees: '' }],
     risser: '',
     evaScale: 0,
-    adamsTest: { side: '', resultCm: '', level: '' }
+    adamsTest: { side: '', resultCm: '', level: '' },
+    mmiiMeasurement: { real: { mid: '', mie: '' }, apparent: { mid: '', mie: '' } },
+    scoliosometer: { thoracic: '', lumbar: '', thoracolumbar: '' },
+    healthCheck: { surgery: false, diabetes: false, fractures: false, cardiac: false, allergies: false, others: false },
+    physicalActivity: { type: '', frequency: '', duration: '' }
   });
 
   const canEdit = [UserRole.GESTOR, UserRole.FISIOTERAPEUTA].includes(userRole);
 
   const filteredPatients = useMemo(() => {
     return patients.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesTab = activeTab === 'Todos' || p.categories.includes(activeTab as any);
+      const name = p.name || '';
+      const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesTab = activeTab === 'Todos' || (p.categories && p.categories.includes(activeTab as any));
       return matchesSearch && matchesTab;
     });
   }, [patients, searchTerm, activeTab]);
@@ -44,6 +67,41 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
     onUpdatePatients(patients.map(p => p.id === selectedPatient.id ? updated : p));
     setSelectedPatient(updated);
     setShowEvalModal(false);
+  };
+
+  const handleSaveNewPatient = () => {
+    const newPatient: Patient = {
+      id: Math.random().toString(36).substr(2, 9).toUpperCase(),
+      name: newPatientData.name,
+      phone: newPatientData.phone,
+      email: newPatientData.email,
+      birthDate: newPatientData.birthDate,
+      condition: newPatientData.condition,
+      lastVisit: new Date().toISOString(),
+      categories: newPatientData.categories as any,
+      clinicalNotes: [],
+      scoliosisData: {
+        curves: [],
+        gender: newPatientData.gender,
+        mainComplaint: newPatientData.mainComplaint,
+        history: newPatientData.history,
+        habits: newPatientData.habits,
+        physicalActivity: newPatientData.physicalActivity
+      }
+    };
+
+    onUpdatePatients([newPatient, ...patients]);
+    resetAddModal();
+  };
+
+  const resetAddModal = () => {
+    setShowAddModal(false);
+    setAddStep(1);
+    setNewPatientData({
+      name: '', phone: '', email: '', birthDate: '', gender: 'M',
+      condition: '', categories: [], mainComplaint: '', history: '',
+      physicalActivity: { type: '', frequency: '', duration: '' }, habits: ''
+    });
   };
 
   const handleAddEvolution = () => {
@@ -60,6 +118,8 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
     setSelectedPatient(updated);
     setNewNote('');
   };
+
+  const isHighRisk = (degrees: string) => parseInt(degrees) >= 25;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[calc(100vh-160px)] animate-fadeIn">
@@ -105,13 +165,12 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
             >
               <div className="flex justify-between items-start">
                 <h4 className="font-bold text-sm truncate">{p.name}</h4>
-                {p.waitingStatus && p.waitingStatus !== 'None' && <span className="w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse border-2 border-white shadow-sm"></span>}
+                {p.scoliosisData?.curves?.some(c => isHighRisk(c.degrees)) && <span className="w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse border-2 border-white shadow-sm"></span>}
               </div>
               <p className={`text-[10px] font-black uppercase mt-1 ${selectedPatient?.id === p.id ? 'text-indigo-100' : 'text-slate-400'}`}>{p.condition}</p>
             </div>
           ))}
         </div>
-
         <div className="p-4 border-t border-slate-50">
           <button onClick={() => setShowAddModal(true)} className="w-full bg-slate-900 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">Novo Paciente</button>
         </div>
@@ -126,7 +185,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                   <div>
                     <h2 className="text-3xl font-black text-slate-800 tracking-tight">{selectedPatient.name}</h2>
                     <div className="flex gap-2 mt-3">
-                      {selectedPatient.categories.map(c => <span key={c} className="text-[9px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg uppercase">{c}</span>)}
+                      {selectedPatient.categories && selectedPatient.categories.map(c => <span key={c} className="text-[9px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg uppercase">{c}</span>)}
                     </div>
                   </div>
                   <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm">
@@ -206,13 +265,15 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                       </button>
                    </div>
 
+                   {/* Resumo Radiológico */}
                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm text-center">
+                      <div className={`p-8 rounded-[2.5rem] border shadow-sm text-center transition-all ${isHighRisk(selectedPatient.scoliosisData?.curves?.[0]?.degrees || '0') ? 'bg-rose-50 border-rose-200' : 'bg-white border-slate-100'}`}>
                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Ângulo de Cobb Máx.</p>
-                         <h3 className="text-5xl font-black text-indigo-600 tracking-tighter">
-                            {selectedPatient.scoliosisData?.curves[0]?.degrees || '--'}°
+                         <h3 className={`text-5xl font-black tracking-tighter ${isHighRisk(selectedPatient.scoliosisData?.curves?.[0]?.degrees || '0') ? 'text-rose-600' : 'text-indigo-600'}`}>
+                            {selectedPatient.scoliosisData?.curves?.[0]?.degrees || '--'}°
                          </h3>
-                         <p className="text-[9px] font-bold text-slate-400 mt-2">{selectedPatient.scoliosisData?.curves[0]?.type || 'Nenhum'}</p>
+                         <p className="text-[9px] font-bold text-slate-400 mt-2">{selectedPatient.scoliosisData?.curves?.[0]?.type || 'Nenhum'}</p>
+                         {isHighRisk(selectedPatient.scoliosisData?.curves?.[0]?.degrees || '0') && <span className="inline-block mt-3 px-3 py-1 bg-rose-600 text-white text-[8px] font-black rounded-lg uppercase animate-pulse">ALERTA: Indica Colete</span>}
                       </div>
                       <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm text-center">
                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Sinal de Risser</p>
@@ -223,33 +284,55 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                       </div>
                       <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm text-center">
                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Adams Test</p>
-                         <h3 className="text-5xl font-black text-rose-500 tracking-tighter">
+                         <h3 className="text-5xl font-black text-indigo-500 tracking-tighter">
                             {selectedPatient.scoliosisData?.adamsTest?.resultCm || '--'}°
                          </h3>
                          <p className="text-[9px] font-bold text-slate-400 mt-2">Giba Costal</p>
                       </div>
                    </div>
 
-                   <section className="bg-slate-50 p-10 rounded-[3rem] border border-slate-100">
+                   {/* Medidas MMII */}
+                   <section className="bg-slate-900 p-10 rounded-[3rem] text-white">
+                      <h4 className="text-sm font-black uppercase tracking-tight mb-8 text-indigo-300">Medidas Comparativas MMII</h4>
+                      <div className="grid grid-cols-2 gap-10">
+                         <div className="space-y-4">
+                            <p className="text-[10px] font-black uppercase text-slate-400">Medida Real (EIAS → Maléolo)</p>
+                            <div className="flex justify-between bg-white/5 p-4 rounded-2xl border border-white/10">
+                               <span className="text-xs">MID: <b className="text-indigo-400">{selectedPatient.scoliosisData?.mmiiMeasurement?.real?.mid || '--'}cm</b></span>
+                               <span className="text-xs">MIE: <b className="text-indigo-400">{selectedPatient.scoliosisData?.mmiiMeasurement?.real?.mie || '--'}cm</b></span>
+                            </div>
+                         </div>
+                         <div className="space-y-4">
+                            <p className="text-[10px] font-black uppercase text-slate-400">Medida Aparente (Cicatriz Umbilical → Maléolo)</p>
+                            <div className="flex justify-between bg-white/5 p-4 rounded-2xl border border-white/10">
+                               <span className="text-xs">MID: <b className="text-emerald-400">{selectedPatient.scoliosisData?.mmiiMeasurement?.apparent?.mid || '--'}cm</b></span>
+                               <span className="text-xs">MIE: <b className="text-emerald-400">{selectedPatient.scoliosisData?.mmiiMeasurement?.apparent?.mie || '--'}cm</b></span>
+                            </div>
+                         </div>
+                      </div>
+                   </section>
+
+                   {/* Outros Parâmetros */}
+                   <section className="bg-white p-10 rounded-[3rem] border border-slate-100">
                       <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight mb-8">Parâmetros Detalhados</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                          <div className="space-y-6">
-                            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                               <span className="text-xs font-bold text-slate-500 uppercase">Dor (Escala EVA)</span>
-                               <span className="text-sm font-black text-slate-800">{selectedPatient.scoliosisData?.evaScale || '0'}/10</span>
+                            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                               <span className="text-xs font-bold text-slate-400 uppercase">Escoliosômetro (T)</span>
+                               <span className="text-sm font-black text-slate-800">{selectedPatient.scoliosisData?.scoliosometer?.thoracic || '--'}°</span>
                             </div>
-                            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                               <span className="text-xs font-bold text-slate-500 uppercase">Setas Sagitais (Lombar)</span>
-                               <span className="text-sm font-black text-slate-800">{selectedPatient.scoliosisData?.sagittalArrows?.lumbar || 'N/A'}</span>
+                            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                               <span className="text-xs font-bold text-slate-400 uppercase">Flecha Lombar</span>
+                               <span className="text-sm font-black text-slate-800">{selectedPatient.scoliosisData?.sagittalArrows?.lumbar || '--'}mm</span>
                             </div>
                          </div>
                          <div className="space-y-6">
-                            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                               <span className="text-xs font-bold text-slate-500 uppercase">Idade Menarca</span>
+                            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                               <span className="text-xs font-bold text-slate-400 uppercase">Maturação (Menarca)</span>
                                <span className="text-sm font-black text-slate-800">{selectedPatient.scoliosisData?.menarcheAge || 'N/A'}</span>
                             </div>
-                            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                               <span className="text-xs font-bold text-slate-500 uppercase">Atividade Física</span>
+                            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                               <span className="text-xs font-bold text-slate-400 uppercase">Atividade Física</span>
                                <span className="text-sm font-black text-indigo-600">{selectedPatient.scoliosisData?.physicalActivity?.type || 'Sedentário'}</span>
                             </div>
                          </div>
@@ -291,46 +374,6 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                    </div>
                 </div>
               )}
-
-              {activeSection === 'Workshop' && (
-                <div className="space-y-8 animate-fadeIn">
-                   <div className="bg-indigo-900 p-10 rounded-[3rem] text-white flex flex-col md:flex-row justify-between items-center gap-10 shadow-2xl relative overflow-hidden">
-                      <div className="absolute right-0 top-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -translate-y-12 translate-x-12"></div>
-                      <div>
-                         <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-3">Ordem de Serviço Ativa</p>
-                         <h3 className="text-2xl font-black tracking-tight mb-2">Colete Boston 3D (Custom)</h3>
-                         <div className="flex gap-4 items-center">
-                            <span className="px-3 py-1.5 bg-indigo-500/30 rounded-xl text-[10px] font-black uppercase border border-indigo-500/30">Status: Fabricação</span>
-                            <span className="px-3 py-1.5 bg-amber-500/30 rounded-xl text-[10px] font-black uppercase border border-amber-500/30">Entrega: 14/12</span>
-                         </div>
-                      </div>
-                      <button className="bg-white text-indigo-900 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-all shadow-xl shadow-indigo-950/20">Ver Detalhes Técnicos</button>
-                   </div>
-
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Insumos Alocados</h4>
-                         <div className="space-y-4">
-                            <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl">
-                               <span className="text-xs font-bold text-slate-700">Polipropileno 4mm</span>
-                               <span className="text-[10px] font-black text-slate-400 uppercase">1.5m²</span>
-                            </div>
-                            <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl">
-                               <span className="text-xs font-bold text-slate-700">Espuma PE Flex</span>
-                               <span className="text-[10px] font-black text-slate-400 uppercase">0.8m²</span>
-                            </div>
-                         </div>
-                      </div>
-                      <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Últimos Ajustes</h4>
-                         <div className="space-y-4">
-                            <p className="text-xs text-slate-500 leading-relaxed font-medium">Paciente relatou desconforto na crista ilíaca esquerda. Recorte ampliado em 1cm para alívio de pressão durante sentar.</p>
-                            <p className="text-[9px] font-black text-indigo-600 uppercase">Tec: Marcos • 22/11/2023</p>
-                         </div>
-                      </div>
-                   </div>
-                </div>
-              )}
             </div>
           </>
         ) : (
@@ -342,10 +385,137 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
         )}
       </div>
 
-      {/* Modal de Avaliação de Escoliose (O Cérebro da Clínica) */}
+      {/* MODAL DE CADASTRO EM ETAPAS (STEPPER) */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[300] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl overflow-hidden animate-slideUp">
+             {/* Header com Stepper */}
+             <div className="p-8 border-b border-slate-50 bg-slate-50/50">
+                <div className="flex justify-between items-center mb-6">
+                   <h3 className="text-2xl font-black text-slate-800 tracking-tight">Cadastro Progressivo</h3>
+                   <button onClick={resetAddModal} className="text-slate-400 hover:text-rose-600">✕</button>
+                </div>
+                <div className="flex gap-2">
+                   {[1, 2, 3].map(step => (
+                     <div key={step} className={`flex-1 h-1.5 rounded-full transition-all ${addStep >= step ? 'bg-indigo-600' : 'bg-slate-200'}`}></div>
+                   ))}
+                </div>
+                <div className="flex justify-between mt-2">
+                   <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">1. Identificação</span>
+                   <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">2. Anamnese</span>
+                   <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">3. Clínica</span>
+                </div>
+             </div>
+
+             <div className="p-10 min-h-[400px]">
+                {/* ETAPA 1: DADOS PESSOAIS */}
+                {addStep === 1 && (
+                  <div className="space-y-6 animate-fadeIn">
+                     <div>
+                       <label className="text-[10px] font-black text-slate-400 uppercase ml-2 mb-2 block">Nome Completo</label>
+                       <input required placeholder="Ex: Lucas Oliveira" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold" value={newPatientData.name} onChange={e => setNewPatientData({...newPatientData, name: e.target.value})} />
+                     </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] font-black text-slate-400 uppercase ml-2 mb-2 block">Telefone</label>
+                          <input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold" value={newPatientData.phone} onChange={e => setNewPatientData({...newPatientData, phone: e.target.value})} />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-black text-slate-400 uppercase ml-2 mb-2 block">Sexo</label>
+                          <select className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold" value={newPatientData.gender} onChange={e => setNewPatientData({...newPatientData, gender: e.target.value})}>
+                            <option value="M">Masculino</option>
+                            <option value="F">Feminino</option>
+                            <option value="O">Outro</option>
+                          </select>
+                        </div>
+                     </div>
+                     <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase ml-2 mb-2 block">Data de Nascimento</label>
+                        <input type="date" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold" value={newPatientData.birthDate} onChange={e => setNewPatientData({...newPatientData, birthDate: e.target.value})} />
+                     </div>
+                  </div>
+                )}
+
+                {/* ETAPA 2: ANAMNESE E HÁBITOS */}
+                {addStep === 2 && (
+                  <div className="space-y-6 animate-fadeIn">
+                     <div>
+                       <label className="text-[10px] font-black text-slate-400 uppercase ml-2 mb-2 block">Queixa Principal</label>
+                       <textarea placeholder="Relato do paciente..." className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold min-h-[100px]" value={newPatientData.mainComplaint} onChange={e => setNewPatientData({...newPatientData, mainComplaint: e.target.value})} />
+                     </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div>
+                           <label className="text-[10px] font-black text-slate-400 uppercase ml-2 mb-2 block">Atividade Física</label>
+                           <input placeholder="Ex: Natação" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold" value={newPatientData.physicalActivity.type} onChange={e => setNewPatientData({...newPatientData, physicalActivity: {...newPatientData.physicalActivity, type: e.target.value}})} />
+                        </div>
+                        <div>
+                           <label className="text-[10px] font-black text-slate-400 uppercase ml-2 mb-2 block">Frequência</label>
+                           <input placeholder="Ex: 3x por semana" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold" value={newPatientData.physicalActivity.frequency} onChange={e => setNewPatientData({...newPatientData, physicalActivity: {...newPatientData.physicalActivity, frequency: e.target.value}})} />
+                        </div>
+                     </div>
+                     <div>
+                       <label className="text-[10px] font-black text-slate-400 uppercase ml-2 mb-2 block">Histórico Médico / Familiar</label>
+                       <textarea placeholder="Cirurgias prévias, doenças na família..." className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold min-h-[80px]" value={newPatientData.history} onChange={e => setNewPatientData({...newPatientData, history: e.target.value})} />
+                     </div>
+                  </div>
+                )}
+
+                {/* ETAPA 3: DIAGNÓSTICO E CATEGORIAS */}
+                {addStep === 3 && (
+                  <div className="space-y-8 animate-fadeIn">
+                     <div>
+                       <label className="text-[10px] font-black text-slate-400 uppercase ml-2 mb-2 block">Diagnóstico Inicial / Condição</label>
+                       <input required placeholder="Ex: Escoliose Idiopática do Adolescente" className="w-full p-4 bg-indigo-50 border border-indigo-200 rounded-2xl text-sm font-black text-indigo-900" value={newPatientData.condition} onChange={e => setNewPatientData({...newPatientData, condition: e.target.value})} />
+                     </div>
+                     <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase ml-2 mb-4 block">Setores de Atendimento</label>
+                        <div className="grid grid-cols-3 gap-3">
+                           {['Escoliose', 'Oficina', 'Amputados'].map(cat => (
+                             <button 
+                                key={cat}
+                                type="button"
+                                onClick={() => {
+                                  const cats = [...newPatientData.categories];
+                                  if(cats.includes(cat)) {
+                                    setNewPatientData({...newPatientData, categories: cats.filter(c => c !== cat)});
+                                  } else {
+                                    setNewPatientData({...newPatientData, categories: [...cats, cat]});
+                                  }
+                                }}
+                                className={`py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${newPatientData.categories.includes(cat) ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 border-slate-100 text-slate-400'}`}
+                             >
+                               {cat}
+                             </button>
+                           ))}
+                        </div>
+                     </div>
+                     <div className="bg-amber-50 p-6 rounded-3xl border border-amber-100">
+                        <p className="text-[10px] font-black text-amber-600 uppercase mb-1">Dica do Sistema</p>
+                        <p className="text-xs text-amber-800 font-medium">Ao finalizar, os dados de anamnese serão migrados automaticamente para o primeiro prontuário deste paciente.</p>
+                     </div>
+                  </div>
+                )}
+             </div>
+
+             {/* Footer de Navegação */}
+             <div className="p-8 border-t border-slate-50 bg-slate-50/50 flex gap-4">
+                {addStep > 1 && (
+                  <button onClick={() => setAddStep(s => s - 1)} className="flex-1 py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400">Voltar</button>
+                )}
+                {addStep < 3 ? (
+                  <button onClick={() => setAddStep(s => s + 1)} disabled={!newPatientData.name && addStep === 1} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-100 disabled:opacity-50">Próxima Etapa</button>
+                ) : (
+                  <button onClick={handleSaveNewPatient} className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-emerald-100">Finalizar Cadastro</button>
+                )}
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Avaliação Completo */}
       {showEvalModal && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[300] flex items-center justify-center p-4">
-           <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[3.5rem] shadow-2xl overflow-hidden animate-slideUp flex flex-col">
+           <div className="bg-white w-full max-w-5xl max-h-[95vh] rounded-[3.5rem] shadow-2xl overflow-hidden animate-slideUp flex flex-col">
               <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
                  <div>
                     <h3 className="text-2xl font-black text-slate-800 tracking-tight">Avaliação Especializada de Escoliose</h3>
@@ -355,6 +525,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
               </div>
               
               <div className="flex-1 overflow-y-auto p-10 space-y-12">
+                 {/* Radiologia e Maturação */}
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                     <section className="space-y-6">
                        <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Radiologia (Cobb)</h5>
@@ -362,7 +533,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                           {evalForm.curves.map((c, i) => (
                              <div key={i} className="flex gap-2">
                                 <select 
-                                   className="flex-1 p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm"
+                                   className="flex-1 p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold"
                                    value={c.type}
                                    onChange={e => {
                                       const newCurves = [...evalForm.curves];
@@ -377,7 +548,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                                 <input 
                                    type="number" 
                                    placeholder="Graus °" 
-                                   className="w-24 p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold"
+                                   className={`w-24 p-4 bg-slate-50 border rounded-2xl text-sm font-black ${isHighRisk(c.degrees) ? 'border-rose-300 text-rose-600' : 'border-slate-200 text-slate-800'}`}
                                    value={c.degrees}
                                    onChange={e => {
                                       const newCurves = [...evalForm.curves];
@@ -391,16 +562,16 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                     </section>
 
                     <section className="space-y-6">
-                       <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Maturação & Testes</h5>
+                       <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Maturação Óssea & Sexual</h5>
                        <div className="grid grid-cols-2 gap-4">
                           <div>
                              <label className="text-[9px] font-black text-slate-400 uppercase ml-2">Sinal de Risser</label>
                              <select 
-                                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm"
+                                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold"
                                 value={evalForm.risser}
                                 onChange={e => setEvalForm({...evalForm, risser: e.target.value})}
                              >
-                                <option value="">Selecione...</option>
+                                <option value="">Risser...</option>
                                 <option>G0 (Sem ossificação)</option>
                                 <option>G1 (25%)</option>
                                 <option>G2 (50%)</option>
@@ -410,18 +581,39 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                              </select>
                           </div>
                           <div>
-                             <label className="text-[9px] font-black text-slate-400 uppercase ml-2">Teste de Adams (°)</label>
+                             <label className="text-[9px] font-black text-slate-400 uppercase ml-2">Menarca (Idade)</label>
                              <input 
                                 type="text" 
-                                placeholder="Giba cm/°" 
-                                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm"
-                                value={evalForm.adamsTest?.resultCm}
-                                onChange={e => setEvalForm({...evalForm, adamsTest: {...evalForm.adamsTest!, resultCm: e.target.value}})}
+                                placeholder="Ex: 12 anos" 
+                                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold"
+                                value={evalForm.menarcheAge}
+                                onChange={e => setEvalForm({...evalForm, menarcheAge: e.target.value})}
                              />
                           </div>
                        </div>
                     </section>
                  </div>
+
+                 {/* Medidas MMII Form */}
+                 <section className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100">
+                    <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6">Medidas de Membros Inferiores (MMII)</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                       <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-500 uppercase">Real (EIAS → Maléolo)</p>
+                          <div className="flex gap-4">
+                             <input type="text" placeholder="MID" className="flex-1 p-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold" value={evalForm.mmiiMeasurement?.real?.mid} onChange={e => setEvalForm({...evalForm, mmiiMeasurement: {...evalForm.mmiiMeasurement!, real: {...evalForm.mmiiMeasurement!.real, mid: e.target.value}}})} />
+                             <input type="text" placeholder="MIE" className="flex-1 p-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold" value={evalForm.mmiiMeasurement?.real?.mie} onChange={e => setEvalForm({...evalForm, mmiiMeasurement: {...evalForm.mmiiMeasurement!, real: {...evalForm.mmiiMeasurement!.real, mie: e.target.value}}})} />
+                          </div>
+                       </div>
+                       <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-500 uppercase">Aparente (Umbigo → Maléolo)</p>
+                          <div className="flex gap-4">
+                             <input type="text" placeholder="MID" className="flex-1 p-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold" value={evalForm.mmiiMeasurement?.apparent?.mid} onChange={e => setEvalForm({...evalForm, mmiiMeasurement: {...evalForm.mmiiMeasurement!, apparent: {...evalForm.mmiiMeasurement!.apparent, mid: e.target.value}}})} />
+                             <input type="text" placeholder="MIE" className="flex-1 p-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold" value={evalForm.mmiiMeasurement?.apparent?.mie} onChange={e => setEvalForm({...evalForm, mmiiMeasurement: {...evalForm.mmiiMeasurement!, apparent: {...evalForm.mmiiMeasurement!.apparent, mie: e.target.value}}})} />
+                          </div>
+                       </div>
+                    </div>
+                 </section>
 
                  <section className="space-y-6 bg-slate-900 p-8 rounded-[2.5rem] text-white">
                     <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6">Plano de Tratamento Fisioterapêutico</h5>
@@ -437,39 +629,6 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
               <div className="p-8 border-t border-slate-50 flex gap-4 bg-slate-50/50">
                  <button onClick={() => setShowEvalModal(false)} className="flex-1 py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-100 transition-all">Cancelar</button>
                  <button onClick={handleSaveEval} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all">Salvar Avaliação Técnica</button>
-              </div>
-           </div>
-        </div>
-      )}
-
-      {showAddModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-           <div className="bg-white w-full max-w-xl rounded-[3.5rem] shadow-2xl overflow-hidden animate-slideUp">
-              <div className="p-10 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-                 <h3 className="text-2xl font-black text-slate-800 tracking-tight">Novo Cadastro</h3>
-                 <button onClick={() => setShowAddModal(false)} className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-slate-400 text-2xl hover:text-rose-600 transition-all shadow-sm">✕</button>
-              </div>
-              <div className="p-10 space-y-6">
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Nome Completo</label>
-                       <input type="text" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm" placeholder="João da Silva" />
-                    </div>
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase ml-2">WhatsApp</label>
-                       <input type="text" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm" placeholder="(11) 99999-0000" />
-                    </div>
-                 </div>
-                 <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Atendimento Principal</label>
-                    <select className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none">
-                       <option>Escoliose (Schroth / SEAS)</option>
-                       <option>Amputados (Protização)</option>
-                       <option>Fisioterapia Traumato-Ortopédica</option>
-                       <option>Somente Oficina Ortopédica</option>
-                    </select>
-                 </div>
-                 <button className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all mt-6 active:scale-95">Criar Prontuário Digital</button>
               </div>
            </div>
         </div>
