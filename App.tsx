@@ -1,7 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
-import { AppView, UserRole, Patient, WorkshopOrder, InventoryItem, Appointment, User } from './types.ts';
+import React, { useState, useEffect, useCallback } from 'react';
+import { AppView, UserRole, Patient, WorkshopOrder, InventoryItem, Appointment, User, WorkshopStatus } from './types.ts';
 import { supabase } from './services/supabaseClient.ts';
+import { MOCK_PATIENTS, MOCK_ORDERS, MOCK_INVENTORY, MOCK_APPOINTMENTS } from './constants.tsx';
 import Sidebar from './components/Sidebar.tsx';
 import Dashboard from './components/Dashboard.tsx';
 import PatientManagement from './components/PatientManagement.tsx';
@@ -23,6 +24,7 @@ const App: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Carregar sessão e dados iniciais do LocalStorage (Fallback imediato)
   useEffect(() => {
     const savedUser = localStorage.getItem('ortho_session');
     if (savedUser) {
@@ -32,9 +34,18 @@ const App: React.FC = () => {
         localStorage.removeItem('ortho_session');
       }
     }
+
+    // Tentar carregar dados salvos localmente antes mesmo do fetch
+    const localPatients = localStorage.getItem('ortho_patients');
+    const localOrders = localStorage.getItem('ortho_orders');
+    const localInventory = localStorage.getItem('ortho_inventory');
+
+    if (localPatients) setPatients(JSON.parse(localPatients));
+    if (localOrders) setOrders(JSON.parse(localOrders));
+    if (localInventory) setInventory(JSON.parse(localInventory));
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!currentUser) return;
     setIsSyncing(true);
     try {
@@ -45,16 +56,47 @@ const App: React.FC = () => {
         supabase.from('appointments').select('*').order('time')
       ]);
       
-      if (pRes.error) console.error("Erro Pacientes:", pRes.error.message);
-      if (pRes.data) setPatients(pRes.data);
-      if (oRes.data) setOrders(oRes.data);
-      if (iRes.data) setInventory(iRes.data);
-      if (aRes.data) setAppointments(aRes.data);
+      // Se houver dados no banco, priorizamos eles e atualizamos o cache local
+      if (pRes.data && pRes.data.length > 0) {
+        setPatients(pRes.data);
+        localStorage.setItem('ortho_patients', JSON.stringify(pRes.data));
+      } else if (pRes.error) {
+        console.warn("Supabase Patients Error (usando cache local):", pRes.error.message);
+      }
+
+      if (oRes.data && oRes.data.length > 0) {
+        setOrders(oRes.data);
+        localStorage.setItem('ortho_orders', JSON.stringify(oRes.data));
+      }
+
+      if (iRes.data && iRes.data.length > 0) {
+        setInventory(iRes.data);
+        localStorage.setItem('ortho_inventory', JSON.stringify(iRes.data));
+      }
+
+      if (aRes.data && aRes.data.length > 0) {
+        setAppointments(aRes.data);
+      } else {
+        // Se a agenda estiver vazia no banco, usamos os mocks para demonstração
+        if (appointments.length === 0) setAppointments(MOCK_APPOINTMENTS);
+      }
+
+      // Se tudo estiver vazio (primeira vez), carrega os Mocks
+      if (!localDataExists() && (!pRes.data || pRes.data.length === 0)) {
+        setPatients(MOCK_PATIENTS);
+        setOrders(MOCK_ORDERS);
+        setInventory(MOCK_INVENTORY);
+      }
+
     } catch (error) {
       console.error("Erro geral de carregamento:", error);
     } finally {
       setIsSyncing(false);
     }
+  }, [currentUser]);
+
+  const localDataExists = () => {
+    return !!localStorage.getItem('ortho_patients');
   };
 
   useEffect(() => {
@@ -62,12 +104,27 @@ const App: React.FC = () => {
       fetchData();
       const channel = supabase
         .channel('db-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'patients' }, () => fetchData())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'workshop_orders' }, () => fetchData())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'patients' }, (payload) => {
+           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+             const updatedPatient = payload.new as Patient;
+             setPatients(prev => {
+               const filtered = prev.filter(p => p.id !== updatedPatient.id);
+               const newList = [updatedPatient, ...filtered].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+               localStorage.setItem('ortho_patients', JSON.stringify(newList));
+               return newList;
+             });
+           } else if (payload.eventType === 'DELETE') {
+             setPatients(prev => {
+               const newList = prev.filter(p => p.id !== payload.old.id);
+               localStorage.setItem('ortho_patients', JSON.stringify(newList));
+               return newList;
+             });
+           }
+        })
         .subscribe();
       return () => { supabase.removeChannel(channel); };
     }
-  }, [currentUser]);
+  }, [currentUser, fetchData]);
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
@@ -77,24 +134,62 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('ortho_session');
+    // Não removemos os dados da clínica para permitir uso offline/persistente
   };
 
   const handleSavePatient = async (patient: Patient) => {
+    // 1. Atualização Optimista (Estado e LocalStorage imediato)
+    setPatients(prev => {
+      const filtered = prev.filter(p => p.id !== patient.id);
+      const newList = [patient, ...filtered].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+      localStorage.setItem('ortho_patients', JSON.stringify(newList));
+      return newList;
+    });
+
+    // 2. Persistência em Nuvem
+    try {
+      const { error } = await supabase.from('patients').upsert(patient, { onConflict: 'id' });
+      if (error) {
+        console.error("Erro Supabase:", error.message);
+        // Opcional: alert(`Nota: Salvo localmente, mas houve erro na nuvem: ${error.message}`);
+      }
+    } catch (error: any) {
+      console.error("Erro Crítico Supabase:", error);
+    }
+  };
+
+  const handleDeletePatient = async (id: string) => {
+    if (!window.confirm("Tem certeza que deseja excluir este prontuário permanentemente?")) return;
+    
+    setPatients(prev => {
+      const newList = prev.filter(p => p.id !== id);
+      localStorage.setItem('ortho_patients', JSON.stringify(newList));
+      return newList;
+    });
+
+    try {
+      const { error } = await supabase.from('patients').delete().eq('id', id);
+      if (error) throw error;
+    } catch (error: any) {
+      console.error(`Erro ao deletar da nuvem: ${error.message}`);
+      // Se deu erro na nuvem, podemos forçar um refetch para garantir consistência
+      fetchData();
+    }
+  };
+
+  const handleSaveOrder = async (order: WorkshopOrder) => {
+    setOrders(prev => {
+      const newList = [order, ...prev.filter(o => o.id !== order.id)];
+      localStorage.setItem('ortho_orders', JSON.stringify(newList));
+      return newList;
+    });
+
     setIsSyncing(true);
     try {
-      const dataToSave = {
-        ...patient,
-        last_visit: new Date().toISOString()
-      };
-
-      const { error } = await supabase
-        .from('patients')
-        .upsert(dataToSave, { onConflict: 'id' });
-
-      if (error) throw new Error(error.message);
-      await fetchData();
+      const { error } = await supabase.from('workshop_orders').upsert(order, { onConflict: 'id' });
+      if (error) throw error;
     } catch (error: any) {
-      alert(`FALHA AO SALVAR: ${error.message}`);
+      console.warn(`Erro ao salvar ordem na nuvem: ${error.message}`);
     } finally {
       setIsSyncing(false);
     }
@@ -106,13 +201,19 @@ const App: React.FC = () => {
     const role = currentUser.role;
     switch (currentView) {
       case AppView.DASHBOARD: return <Dashboard onViewChange={setCurrentView} patients={patients} orders={orders} appointments={appointments} />;
-      case AppView.PATIENTS: return <PatientManagement userRole={role} patients={patients} onSavePatient={handleSavePatient} />;
-      case AppView.WORKSHOP: return <WorkshopManagement userRole={role} orders={orders} onUpdateOrders={setOrders} />;
-      case AppView.INVENTORY: return <InventoryManagement items={inventory} onUpdateInventory={setInventory} />;
+      case AppView.PATIENTS: return <PatientManagement userRole={role} patients={patients} onSavePatient={handleSavePatient} onDeletePatient={handleDeletePatient} />;
+      case AppView.WORKSHOP: return <WorkshopManagement userRole={role} orders={orders} patients={patients} onSaveOrder={handleSaveOrder} />;
+      case AppView.INVENTORY: return <InventoryManagement items={inventory} onUpdateInventory={(newInv) => {
+        setInventory(newInv);
+        localStorage.setItem('ortho_inventory', JSON.stringify(newInv));
+      }} />;
       case AppView.FINANCES: return <FinanceDashboard />;
       case AppView.INDICATORS: return <IndicatorsView />;
       case AppView.AI_INSIGHTS: return <AIAssistant />;
-      case AppView.CALENDAR: return <CalendarView appointments={appointments} onUpdateAppointments={setAppointments} />;
+      case AppView.CALENDAR: return <CalendarView appointments={appointments} onUpdateAppointments={(newApp) => {
+        setAppointments(newApp);
+        // Opcional: Persistir agenda no banco/local se necessário
+      }} />;
       default: return <Dashboard onViewChange={setCurrentView} patients={patients} orders={orders} appointments={appointments} />;
     }
   };

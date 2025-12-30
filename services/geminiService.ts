@@ -1,7 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Criamos uma função auxiliar para obter o cliente apenas quando necessário
 const getClient = () => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
@@ -30,7 +29,7 @@ export const getGeminiAnalysis = async (context: string) => {
     return response.text || "Sem resposta da IA no momento.";
   } catch (error: any) {
     console.error("Gemini Error:", error);
-    return `O Cérebro IA está temporariamente indisponível: ${error.message}`;
+    return `O Cérebro IA está temporariamente indisponível.`;
   }
 };
 
