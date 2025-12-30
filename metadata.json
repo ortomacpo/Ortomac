@@ -1,0 +1,7 @@
+{
+  "name": "Ortomac",
+  "description": "Uma plataforma integrada para gestão de clínicas de fisioterapia e oficinas ortopédicas, com acompanhamento de pacientes, ordens de serviço e inteligência artificial para análise de progresso.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
