@@ -51,29 +51,29 @@ export interface ScoliosisCurve {
 }
 
 export interface WorkshopEvaluation {
-  productType: string;
+  product_type: string;
   measurements: string;
-  materialsUsed: string;
-  technicalNotes: string;
-  lastAdjustmentDate: string;
+  materials_used: string;
+  technical_notes: string;
+  last_adjustment_date: string;
 }
 
 export interface ScoliosisEvaluation {
-  evaluationDate?: string;
+  evaluation_date?: string;
   birthplace?: string;
-  maritalStatus?: string;
+  marital_status?: string;
   gender?: string;
   profession?: string;
   phone2?: string;
-  fullAddress?: string;
+  full_address?: string;
   weight?: string;
   height?: string;
-  mainComplaint?: string;
+  main_complaint?: string;
   habits?: string;
   history?: string; 
-  personalFamilyHistory?: string;
+  personal_family_history?: string;
   treatments?: string;
-  healthCheck?: {
+  health_check?: {
     surgery: boolean;
     diabetes: boolean;
     fractures: boolean;
@@ -81,52 +81,47 @@ export interface ScoliosisEvaluation {
     allergies: boolean;
     others: boolean;
   };
-  painType?: string;
-  painLocation?: string;
+  pain_type?: string;
+  pain_location?: string;
   medication?: string;
-  evaScale?: number;
+  eva_scale?: number;
   
-  // Radiologia
   curves: ScoliosisCurve[];
   risser?: string;
   
-  // Maturação Sexual
   breasts?: boolean;
-  axillaryHair?: boolean;
-  menarcheAge?: string;
-  menstruationStatus?: string;
+  axillary_hair?: boolean;
+  menarche_age?: string;
+  menstruation_status?: string;
 
-  // Fatores e Hábitos
-  worseningFactors?: string;
-  improvementFactors?: string;
-  sleepQuality?: string;
-  sleepPosition?: string;
-  physicalActivity?: {
+  worsening_factors?: string;
+  improvement_factors?: string;
+  sleep_quality?: string;
+  sleep_position?: string;
+  physical_activity?: {
     type: string;
     frequency: string;
     duration: string;
   };
-  progressFactor?: string;
+  progress_factor?: string;
 
-  // Avaliação Postural (Flechas)
-  sagittalArrows?: {
+  sagittal_arrows?: {
     cervical: string;
     lumbar: string;
   };
-  trunkShift?: string;
+  trunk_shift?: string;
 
-  // Testes Físicos
   scoliosometer?: {
     thoracic: string;
     lumbar: string;
     thoracolumbar: string;
   };
   inclinometer?: {
-    cervicalC7: string;
-    thoracicT12_1: string;
+    cervical_c7: string;
+    thoracic_t12_1: string;
     result1: string;
-    thoracicT12_2: string;
-    sacroS1: string;
+    thoracic_t12_2: string;
+    sacro_s1: string;
     result2: string;
   };
   rotations?: {
@@ -135,23 +130,23 @@ export interface ScoliosisEvaluation {
     inferior: { d: string; e: string };
     unipodal: { d: string; e: string };
   };
-  mmiiMeasurement?: {
+  mmii_measurement?: {
     real: { mid: string; mie: string };
     apparent: { mid: string; mie: string };
   };
-  adamsTest?: {
+  adams_test?: {
     side: 'D' | 'E' | 'Ambos' | '';
-    resultCm: string;
+    result_cm: string;
     level: string;
   };
-  muscleForce?: string;
-  abdominalTest?: {
-    obliqueRight: string;
-    obliqueLeft: string;
-    inferiorAbdominal: boolean;
+  muscle_force?: string;
+  abdominal_test?: {
+    oblique_right: string;
+    oblique_left: string;
+    inferior_abdominal: boolean;
   };
-  physioDiagnosis?: string;
-  physioPlan?: string;
+  physio_diagnosis?: string;
+  physio_plan?: string;
 }
 
 export interface Patient {
@@ -159,14 +154,14 @@ export interface Patient {
   name: string;
   phone: string;
   email: string;
-  birthDate?: string;
-  lastVisit: string;
+  birth_date?: string;
+  last_visit: string;
   condition: string;
   categories: ('Amputados' | 'Escoliose' | 'Oficina')[];
-  clinicalNotes: ClinicalNote[];
-  scoliosisData?: ScoliosisEvaluation;
-  workshopData?: WorkshopEvaluation;
-  waitingStatus?: WaitingStatus;
+  clinical_notes: ClinicalNote[];
+  scoliosis_data?: ScoliosisEvaluation;
+  workshop_data?: WorkshopEvaluation;
+  waiting_status?: WaitingStatus;
 }
 
 export interface InventoryItem {
@@ -175,27 +170,28 @@ export interface InventoryItem {
   category: 'Resinas' | 'Metais' | 'Tecidos' | 'Componentes' | 'Outros';
   quantity: number;
   unit: string;
-  minQuantity: number;
+  min_quantity: number;
 }
 
 export interface WorkshopOrder {
   id: string;
-  patientId: string;
-  patientName: string;
+  patient_id: string;
+  patient_name: string;
   product: string;
   status: WorkshopStatus;
   deadline: string;
   price: number;
-  materialsUsed?: { itemId: string; qty: number }[];
+  materials_used?: { itemId: string; qty: number }[];
 }
 
 export interface Appointment {
   id: string;
-  patientId: string;
-  patientName: string;
+  patient_id: string;
+  patient_name: string;
   time: string;
   type: 'Physio' | 'Workshop';
   status: 'confirmed' | 'pending' | 'completed';
+  appointment_date?: string;
 }
 
 export interface FinancialRecord {
@@ -205,11 +201,4 @@ export interface FinancialRecord {
   category: string;
   value: number;
   type: 'income' | 'expense';
-}
-
-export interface KPI {
-  label: string;
-  value: string | number;
-  trend: 'up' | 'down' | 'neutral';
-  description: string;
 }

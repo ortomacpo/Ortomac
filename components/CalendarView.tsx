@@ -60,8 +60,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ appointments, onUpdateAppoi
 
     const newApp: Appointment = {
       id: Math.random().toString(36).substr(2, 9),
-      patientId: patient.id,
-      patientName: patient.name,
+      // Fix: Changed patientId to patient_id
+      patient_id: patient.id,
+      // Fix: Changed patientName to patient_name
+      patient_name: patient.name,
       time: formData.time,
       type: formData.type,
       status: 'pending'
@@ -143,8 +145,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ appointments, onUpdateAppoi
                     {weekDays.map((day, dayIdx) => (
                       <td key={dayIdx} className={`p-2 border-b border-r border-slate-50 h-24 relative ${day.toDateString() === new Date().toDateString() ? 'bg-blue-50/10' : ''}`}>
                         {appointments
-                          .filter(app => app.time === hour) // Simplificado para o mock: assume que se houver o horário, ele está nesse dia específico para teste
-                          .filter(() => dayIdx === 0) // Apenas para popular a segunda-feira no mock original
+                          .filter(app => app.time === hour) 
+                          .filter(() => dayIdx === 0) 
                           .map(app => (
                             <div 
                               key={app.id} 
@@ -156,7 +158,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ appointments, onUpdateAppoi
                             >
                               <div className="overflow-hidden">
                                 <p className="text-[8px] font-bold uppercase opacity-60 truncate">{app.type === 'Physio' ? 'Fisioterapia' : 'Oficina'}</p>
-                                <h4 className="text-[11px] font-bold leading-tight truncate">{app.patientName}</h4>
+                                {/* Fix: Changed patientName to patient_name */}
+                                <h4 className="text-[11px] font-bold leading-tight truncate">{app.patient_name}</h4>
                               </div>
                               <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase w-fit ${
                                 app.status === 'confirmed' ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-800'

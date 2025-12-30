@@ -7,7 +7,6 @@ interface InventoryManagementProps {
   onUpdateInventory: (items: InventoryItem[]) => void;
 }
 
-// Updated component to receive items and update function as props
 const InventoryManagement: React.FC<InventoryManagementProps> = ({ items, onUpdateInventory }) => {
   return (
     <div className="animate-fadeIn space-y-6">
@@ -28,7 +27,9 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ items, onUpda
          </div>
          <div className="bg-rose-50 p-4 rounded-xl border border-rose-100 shadow-sm">
             <p className="text-[10px] font-bold text-rose-400 uppercase">Estoque Baixo</p>
-            <p className="text-2xl font-bold text-rose-600">{items.filter(i => i.quantity <= i.minQuantity).length}</p>
+            <p className="text-2xl font-bold text-rose-600">
+              {items.filter(i => i.quantity <= i.min_quantity).length}
+            </p>
          </div>
       </div>
 
@@ -54,19 +55,19 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ items, onUpda
                 <td className="px-6 py-4 text-sm font-medium text-slate-700">{item.quantity} {item.unit}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded-full text-[9px] font-bold uppercase ${
-                    item.quantity <= item.minQuantity 
+                    item.quantity <= item.min_quantity 
                     ? 'bg-rose-100 text-rose-700' 
                     : 'bg-emerald-100 text-emerald-700'
                   }`}>
-                    {item.quantity <= item.minQuantity ? 'REPOR URGENTE' : 'ESTÁVEL'}
+                    {item.quantity <= item.min_quantity ? 'REPOR URGENTE' : 'ESTÁVEL'}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
                   <button className="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition mr-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </button>
                   <button className="text-slate-400 hover:bg-slate-100 p-1.5 rounded-lg transition">
-                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </button>
                 </td>
               </tr>

@@ -56,7 +56,8 @@ const WorkshopManagement: React.FC<WorkshopManagementProps> = ({ userRole, order
                       </div>
                     </div>
                     <h4 className="font-black text-slate-800 text-base mb-1 group-hover:text-indigo-600 transition-colors leading-tight">{order.product}</h4>
-                    <p className="text-[11px] font-bold text-slate-500 uppercase">{order.patientName}</p>
+                    {/* Fix: Changed order.patientName to order.patient_name */}
+                    <p className="text-[11px] font-bold text-slate-500 uppercase">{order.patient_name}</p>
                     
                     <div className="mt-8 flex items-center justify-between border-t border-slate-50 pt-5">
                        <span className={`text-[10px] font-black uppercase text-${col.color}-600 bg-${col.color}-50 px-2 py-1 rounded-lg`}>{order.status}</span>

@@ -15,7 +15,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, patients, orders, a
   const stats = [
     { label: 'Sessões Hoje', value: appointments.length, icon: '📅', color: 'bg-indigo-600', trend: '+2', bg: 'bg-indigo-50/50' },
     { label: 'Oficina Ativa', value: orders.length, icon: '🛠️', color: 'bg-amber-500', trend: '4 urgentes', bg: 'bg-amber-50/50' },
-    { label: 'Fila de Espera', value: patients.filter(p => p.waitingStatus && p.waitingStatus !== 'None').length, icon: '🕒', color: 'bg-rose-500', trend: 'Pico: 14h', bg: 'bg-rose-50/50' },
+    // Fix: Changed waitingStatus to waiting_status
+    { label: 'Fila de Espera', value: patients.filter(p => p.waiting_status && p.waiting_status !== 'None').length, icon: '🕒', color: 'bg-rose-500', trend: 'Pico: 14h', bg: 'bg-rose-50/50' },
     { label: 'Novos Pacientes', value: 12, icon: '✨', color: 'bg-emerald-500', trend: '+15% mês', bg: 'bg-emerald-50/50' },
   ];
 
@@ -94,7 +95,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, patients, orders, a
                   <div key={app.id} className="bg-white/5 hover:bg-white/10 p-4 rounded-2xl flex items-center gap-4 transition-all cursor-pointer border border-white/5">
                     <div className="text-[10px] font-black text-indigo-400 bg-indigo-500/10 w-12 py-2 rounded-xl text-center">{app.time}</div>
                     <div className="flex-1 overflow-hidden">
-                      <p className="text-sm font-bold text-white truncate">{app.patientName}</p>
+                      {/* Fix: Changed app.patientName to app.patient_name */}
+                      <p className="text-sm font-bold text-white truncate">{app.patient_name}</p>
                       <p className="text-[8px] font-black text-slate-500 uppercase mt-0.5">{app.type === 'Physio' ? 'Fisioterapia' : 'Oficina'}</p>
                     </div>
                   </div>
