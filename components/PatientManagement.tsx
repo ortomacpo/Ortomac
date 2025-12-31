@@ -5,7 +5,7 @@ import { Patient, UserRole } from '../types.ts';
 interface PatientManagementProps {
   userRole: UserRole;
   patients: Patient[];
-  onSavePatient: (patient: Patient) => Promise<void>;
+  onSavePatient: (patient: Patient) => Promise<void | boolean>;
   onDeletePatient: (id: string) => Promise<void>;
   onOpenScoliosis: (patientId: string) => void;
 }
@@ -56,44 +56,48 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
   };
 
   const handleSaveNewPatient = async () => {
-    if (!newPatientData.name.trim()) return alert("Nome é obrigatório!");
+    if (!newPatientData.name.trim()) return alert("O nome do paciente é obrigatório!");
     
     setIsSaving(true);
-    const newId = isEditing ? newPatientData.id : crypto.randomUUID();
-    
-    const finalPatientData = { ...newPatientData };
-    if (billingAddressMode === 'same') {
-      finalPatientData.nf_address_street = '';
-      finalPatientData.nf_address_neighborhood = '';
-      finalPatientData.nf_address_city = '';
-      finalPatientData.nf_address_state = '';
-      finalPatientData.nf_address_cep = '';
-    }
-
-    const categories = finalPatientData.categories || [];
-    const isEscoliose = categories.includes('Escoliose');
-    const isFisioDest = categories.some((c: string) => c === 'Escoliose' || c === 'Amputados');
-    const isOficinaDest = categories.includes('Oficina');
-
-    const patientToSave: any = {
-      ...finalPatientData,
-      id: newId,
-      last_visit: new Date().toISOString(),
-      pending_physio_eval: isFisioDest ? true : (isEditing ? finalPatientData.pending_physio_eval : false),
-      pending_workshop_eval: isOficinaDest ? true : (isEditing ? finalPatientData.pending_workshop_eval : false),
-    };
-
     try {
+      const newId = isEditing ? newPatientData.id : crypto.randomUUID();
+      
+      const finalPatientData = { ...newPatientData };
+      if (billingAddressMode === 'same') {
+        finalPatientData.nf_address_street = '';
+        finalPatientData.nf_address_neighborhood = '';
+        finalPatientData.nf_address_city = '';
+        finalPatientData.nf_address_state = '';
+        finalPatientData.nf_address_cep = '';
+      }
+
+      const categories = finalPatientData.categories || [];
+      const isEscoliose = categories.includes('Escoliose');
+      const isFisioDest = categories.some((c: string) => c === 'Escoliose' || c === 'Amputados');
+      const isOficinaDest = categories.includes('Oficina');
+
+      const patientToSave: any = {
+        ...finalPatientData,
+        id: newId,
+        last_visit: new Date().toISOString(),
+        pending_physio_eval: isFisioDest ? true : (isEditing ? finalPatientData.pending_physio_eval : false),
+        pending_workshop_eval: isOficinaDest ? true : (isEditing ? finalPatientData.pending_workshop_eval : false),
+      };
+
       await onSavePatient(patientToSave);
+      
       const savedId = patientToSave.id;
       resetAddModal();
       
-      // Se for Escoliose, abre o prontuário especializado imediatamente após o cadastro
+      // Feedback visual de sucesso e redirecionamento se necessário
       if (isEscoliose) {
         onOpenScoliosis(savedId);
+      } else {
+        alert("Paciente cadastrado com sucesso!");
       }
-    } catch (err) {
-      alert("Erro ao salvar. Verifique a conexão.");
+    } catch (err: any) {
+      console.error("Erro no formulário:", err);
+      alert("Houve um erro ao processar o cadastro. Detalhes: " + (err.message || "Erro de conexão"));
     } finally {
       setIsSaving(false);
     }
@@ -149,6 +153,9 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
               <p className={`text-[9px] font-bold uppercase mt-0.5 ${selectedPatient?.id === p.id ? 'text-indigo-400' : 'text-slate-400'}`}>{p.phone || 'Sem telefone'}</p>
             </div>
           ))}
+          {filteredPatients.length === 0 && (
+            <div className="py-10 text-center text-slate-300 uppercase text-[10px] font-black tracking-widest opacity-50">Nenhum paciente encontrado</div>
+          )}
         </div>
         
         <div className="p-4 bg-white border-t border-slate-50">
@@ -175,7 +182,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                    </div>
                 </div>
                 <div className="flex gap-4">
-                  {(userRole === UserRole.GESTOR || userRole === UserRole.FISIOTERAPEUTA) && selectedPatient.categories.includes('Escoliose') && (
+                  {(userRole === UserRole.GESTOR || userRole === UserRole.FISIOTERAPEUTA) && selectedPatient.categories?.includes('Escoliose') && (
                     <button 
                       onClick={() => onOpenScoliosis(selectedPatient.id)}
                       className="bg-indigo-600 text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center gap-2"

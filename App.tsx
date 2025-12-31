@@ -39,16 +39,20 @@ const App: React.FC = () => {
     setIsSyncing(true);
     
     try {
-      const { data: pData } = await supabase.from('patients').select('*').order('name');
+      const { data: pData, error: pError } = await supabase.from('patients').select('*').order('name');
+      if (pError) throw pError;
       if (pData) setPatients(pData.map(p => ({ ...p, ...(p.metadata || {}) })));
 
-      const { data: oData } = await supabase.from('workshop_orders').select('*').order('created_at', { ascending: false });
+      const { data: oData, error: oError } = await supabase.from('workshop_orders').select('*').order('created_at', { ascending: false });
+      if (oError) throw oError;
       if (oData) setOrders(oData);
 
-      const { data: iData } = await supabase.from('inventory').select('*').order('name');
+      const { data: iData, error: iError } = await supabase.from('inventory').select('*').order('name');
+      if (iError) throw iError;
       if (iData) setInventory(iData);
 
-      const { data: aData } = await supabase.from('appointments').select('*').order('appointment_date');
+      const { data: aData, error: aError } = await supabase.from('appointments').select('*').order('appointment_date');
+      if (aError) throw aError;
       if (aData) setAppointments(aData);
     } catch (e: any) {
       console.error("Erro ao carregar dados:", e);
@@ -68,21 +72,40 @@ const App: React.FC = () => {
   }, [currentUser, fetchAllData]);
 
   const handleSavePatient = async (patient: Patient) => {
-    const { clinical_notes, scoliosis_record, ...rest } = patient;
-    const anchorFields = ['id', 'name', 'phone', 'email', 'condition', 'last_visit', 'pending_physio_eval', 'pending_workshop_eval'];
-    const payload: any = {};
-    const metadata: any = {};
+    try {
+      const { clinical_notes, scoliosis_record, ...rest } = patient;
+      const anchorFields = ['id', 'name', 'phone', 'email', 'condition', 'last_visit', 'pending_physio_eval', 'pending_workshop_eval'];
+      const payload: any = {};
+      const metadata: any = {};
 
-    Object.keys(rest).forEach(key => {
-      if (anchorFields.includes(key)) payload[key] = (rest as any)[key];
-      else metadata[key] = (rest as any)[key];
-    });
-    
-    // Inclui dados especializados no metadados para persistência
-    payload.metadata = { ...metadata, scoliosis_record };
+      Object.keys(rest).forEach(key => {
+        if (anchorFields.includes(key)) {
+          payload[key] = (rest as any)[key];
+        } else {
+          metadata[key] = (rest as any)[key];
+        }
+      });
+      
+      // Persistência estruturada em JSONB no campo metadata para campos dinâmicos
+      payload.metadata = { 
+        ...metadata, 
+        scoliosis_record: scoliosis_record || (patient.scoliosis_record || null) 
+      };
 
-    await supabase.from('patients').upsert(payload);
-    fetchAllData();
+      const { error } = await supabase.from('patients').upsert(payload, { onConflict: 'id' });
+      
+      if (error) {
+        console.error("Erro Supabase:", error);
+        throw new Error(`Erro ao salvar no banco: ${error.message}`);
+      }
+
+      await fetchAllData();
+      return true;
+    } catch (e: any) {
+      console.error("Erro Crítico no Salvamento:", e);
+      alert(e.message || "Erro desconhecido ao salvar paciente.");
+      throw e;
+    }
   };
 
   const openScoliosisRecord = (patientId: string) => {
@@ -130,7 +153,7 @@ const App: React.FC = () => {
             (() => {
                 const targetPatient = selectedScoliosisPatientId 
                     ? patients.find(p => p.id === selectedScoliosisPatientId)
-                    : patients.find(p => p.pending_physio_eval && p.categories.includes('Escoliose'));
+                    : patients.find(p => p.pending_physio_eval && p.categories?.includes('Escoliose'));
 
                 return targetPatient ? (
                     <ScoliosisRecord 
