@@ -50,16 +50,18 @@ export interface Patient {
   email: string;
   birth_date?: string;
   responsible_name?: string;
+  // CPF of the legal representative for minors
+  responsible_cpf?: string;
+  // Clinical screening observations
+  triagem_obs?: string;
   address_street?: string;
   address_neighborhood?: string;
   address_city?: string;
   address_state?: string;
   address_cep?: string;
-  // Encaminhamento e Chegada
-  referring_type?: 'Spontaneous' | 'Direct' | 'Medical'; 
+  referring_type?: 'Spontaneous' | 'Direct' | 'Medical' | ''; 
   referring_professional_name?: string;
   referring_professional_specialty?: string;
-  // Dados Fiscais (NF)
   nf_full_name?: string;
   nf_cpf?: string;
   nf_address_street?: string;
@@ -70,7 +72,7 @@ export interface Patient {
   
   last_visit: string;
   condition: string;
-  categories: ('Amputados' | 'Escoliose' | 'Oficina')[];
+  categories: string[]; // Alterado para string[] para suportar as novas especialidades
   clinical_notes: ClinicalNote[];
   waiting_status?: WaitingStatus;
 }

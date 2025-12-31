@@ -1,10 +1,15 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// NOTA: Certifique-se de que estas informações batem com o seu painel do Supabase -> Settings -> API
+// URL do projeto do usuário
 const SUPABASE_URL = 'https://rolmywoyffnjujopaqkd.supabase.co'; 
 
-// Importante: Se a sua chave começar com 'sb_publishable', verifique se ela é a chave 'anon/public'
+// A chave 'anon' pública necessária para o client-side
 const SUPABASE_ANON_KEY = 'sb_publishable_7VsRzyXKhPJISXrVsES1AA_aOhZDWjT';
+
+// Criação do cliente com tratamento de erro inicial
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.error("Supabase: Credenciais ausentes no arquivo de serviço.");
+}
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

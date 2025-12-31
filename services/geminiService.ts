@@ -1,17 +1,14 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const getClient = () => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    throw new Error("API_KEY não configurada no ambiente.");
-  }
-  return new GoogleGenAI({ apiKey });
-};
-
+/**
+ * Gets a general analysis for clinical and operational optimization.
+ * Uses gemini-3-flash-preview for general text tasks.
+ */
 export const getGeminiAnalysis = async (context: string) => {
   try {
-    const ai = getClient();
+    // Initializing Gemini client using the environment variable API_KEY directly.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: context,
@@ -26,6 +23,7 @@ export const getGeminiAnalysis = async (context: string) => {
         temperature: 0.7,
       }
     });
+    // Accessing text property directly as per latest SDK guidelines.
     return response.text || "Sem resposta da IA no momento.";
   } catch (error: any) {
     console.error("Gemini Error:", error);
@@ -33,9 +31,14 @@ export const getGeminiAnalysis = async (context: string) => {
   }
 };
 
+/**
+ * Analyzes patient progress data and returns structured JSON recommendations.
+ * Uses gemini-3-pro-preview for complex reasoning and structured output.
+ */
 export const analyzePatientProgress = async (patientData: any) => {
   try {
-    const ai = getClient();
+    // Creating a new instance right before the call to ensure fresh API key usage.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-preview",
       contents: `Analise o progresso: ${JSON.stringify(patientData)}`,
@@ -52,6 +55,7 @@ export const analyzePatientProgress = async (patientData: any) => {
         }
       }
     });
+    // Parsing the JSON string returned in the text property.
     return JSON.parse(response.text || "{}");
   } catch (error) {
     console.error("Analysis Error:", error);
