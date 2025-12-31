@@ -46,13 +46,21 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
     });
   }, [patients, searchTerm, activeTab]);
 
-  const handleOpenEdit = (patient: any, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleOpenEdit = (patient: any, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setIsEditing(true);
     setNewPatientData({ ...patient });
     setBillingAddressMode(patient.nf_address_street ? 'new' : 'same');
     setShowAddModal(true);
     setActiveFormTab('identificacao');
+  };
+
+  const handleDelete = (id: string, name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm(`Deseja realmente excluir o prontuário de ${name}? Esta ação não pode ser desfeita.`)) {
+      onDeletePatient(id);
+      if (selectedPatient?.id === id) setSelectedPatient(null);
+    }
   };
 
   const handleSaveNewPatient = async () => {
@@ -132,6 +140,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[calc(100vh-160px)] animate-fadeIn">
       
+      {/* LISTA DE PACIENTES */}
       <div className="lg:col-span-4 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col overflow-hidden">
         <div className="p-6 border-b border-slate-50 space-y-4 bg-slate-50/30">
           <div className="flex justify-between items-center">
@@ -146,9 +155,35 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide">
           {filteredPatients.map(p => (
-            <div key={p.id} onClick={() => setSelectedPatient(p)} className={`p-5 rounded-[2rem] cursor-pointer transition-all border ${selectedPatient?.id === p.id ? 'bg-slate-900 border-slate-900 text-white shadow-xl' : 'bg-white border-slate-100 hover:border-slate-200'}`}>
-              <h4 className="font-black text-sm truncate">{p.name}</h4>
-              <p className={`text-[9px] font-bold uppercase mt-0.5 ${selectedPatient?.id === p.id ? 'text-indigo-400' : 'text-slate-400'}`}>{p.phone || 'Sem telefone'}</p>
+            <div 
+              key={p.id} 
+              onClick={() => setSelectedPatient(p)} 
+              className={`p-5 rounded-[2rem] cursor-pointer transition-all border group relative ${selectedPatient?.id === p.id ? 'bg-slate-900 border-slate-900 text-white shadow-xl' : 'bg-white border-slate-100 hover:border-slate-200'}`}
+            >
+              <div className="pr-16">
+                <h4 className="font-black text-sm truncate">{p.name}</h4>
+                <p className={`text-[9px] font-bold uppercase mt-0.5 ${selectedPatient?.id === p.id ? 'text-indigo-400' : 'text-slate-400'}`}>{p.phone || 'Sem telefone'}</p>
+              </div>
+
+              {/* AÇÕES FLUTUANTES NA LISTA */}
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                 <button 
+                   onClick={(e) => handleOpenEdit(p, e)}
+                   className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${selectedPatient?.id === p.id ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-slate-50 text-slate-400 hover:bg-indigo-600 hover:text-white shadow-sm'}`}
+                   title="Editar cadastro"
+                 >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                 </button>
+                 {userRole === UserRole.GESTOR && (
+                   <button 
+                     onClick={(e) => handleDelete(p.id, p.name, e)}
+                     className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${selectedPatient?.id === p.id ? 'bg-rose-500/20 text-rose-300 hover:bg-rose-500/40' : 'bg-rose-50 text-rose-400 hover:bg-rose-600 hover:text-white shadow-sm'}`}
+                     title="Excluir prontuário"
+                   >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                   </button>
+                 )}
+              </div>
             </div>
           ))}
           {filteredPatients.length === 0 && (
@@ -161,6 +196,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
         </div>
       </div>
 
+      {/* DETALHES DO PACIENTE SELECIONADO */}
       <div className="lg:col-span-8 bg-white rounded-[3.5rem] border border-slate-100 shadow-sm flex flex-col overflow-hidden relative">
         {selectedPatient ? (
           <div className="p-12 space-y-12 overflow-y-auto scrollbar-hide">
@@ -188,9 +224,9 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                       Prontuário Especializado
                     </button>
                   )}
-                  <button onClick={(e) => handleOpenEdit(selectedPatient, e)} className="bg-white text-slate-400 p-4 rounded-2xl hover:text-indigo-600 transition-all border border-slate-200 shadow-sm"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
+                  <button onClick={(e) => handleOpenEdit(selectedPatient, e)} className="bg-white text-slate-400 p-4 rounded-2xl hover:text-indigo-600 transition-all border border-slate-200 shadow-sm" title="Editar informações"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
                   {userRole === UserRole.GESTOR && (
-                    <button onClick={() => { if(confirm('Excluir paciente permanentemente?')) onDeletePatient(selectedPatient.id); }} className="bg-white text-rose-400 p-4 rounded-2xl hover:text-rose-600 transition-all border border-slate-200 shadow-sm"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                    <button onClick={(e) => handleDelete(selectedPatient.id, selectedPatient.name, e)} className="bg-white text-rose-400 p-4 rounded-2xl hover:text-rose-600 transition-all border border-slate-200 shadow-sm" title="Excluir permanentemente"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
                   )}
                 </div>
              </div>
@@ -240,6 +276,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
         )}
       </div>
 
+      {/* MODAL DE ADIÇÃO/EDIÇÃO (EXISTENTE) */}
       {showAddModal && (
         <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-3xl z-[500] flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-4xl rounded-[4rem] shadow-2xl flex flex-col max-h-[95vh] overflow-hidden animate-fadeInUp">
@@ -247,7 +284,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
              <div className="p-8 px-12 pt-10">
                 <div className="flex justify-between items-start mb-6">
                    <div>
-                      <h3 className="text-4xl font-black text-slate-800 tracking-tighter">Novo Atendimento</h3>
+                      <h3 className="text-4xl font-black text-slate-800 tracking-tighter">{isEditing ? 'Editar Registro' : 'Novo Atendimento'}</h3>
                       <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-1">PASSO {currentStep} DE 5</p>
                    </div>
                    <button onClick={resetAddModal} className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition-all border border-slate-100 shadow-sm">✕</button>
