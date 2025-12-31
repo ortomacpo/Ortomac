@@ -86,12 +86,12 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
 
       const success = await onSavePatient(patientToSave);
       
-      if (success) {
+      if (success === true) {
         resetAddModal();
-        if (isEscoliose) {
+        if (isEscoliose && !isEditing) {
           onOpenScoliosis(patientToSave.id);
         } else {
-          alert("Registro concluído com sucesso!");
+          alert("Dados salvos com sucesso!");
         }
       }
     } catch (err: any) {
