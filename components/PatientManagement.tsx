@@ -7,12 +7,13 @@ interface PatientManagementProps {
   patients: Patient[];
   onSavePatient: (patient: Patient) => Promise<void>;
   onDeletePatient: (id: string) => Promise<void>;
+  onOpenScoliosis: (patientId: string) => void;
 }
 
 type FilterCategory = 'Todos' | 'Escoliose' | 'Amputados' | 'Oficina';
 type FormTab = 'identificacao' | 'endereco' | 'encaminhamento' | 'faturamento' | 'clinico';
 
-const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patients, onSavePatient, onDeletePatient }) => {
+const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patients, onSavePatient, onDeletePatient, onOpenScoliosis }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<FilterCategory>('Todos');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -69,15 +70,28 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
       finalPatientData.nf_address_cep = '';
     }
 
+    const categories = finalPatientData.categories || [];
+    const isEscoliose = categories.includes('Escoliose');
+    const isFisioDest = categories.some((c: string) => c === 'Escoliose' || c === 'Amputados');
+    const isOficinaDest = categories.includes('Oficina');
+
     const patientToSave: any = {
       ...finalPatientData,
       id: newId,
       last_visit: new Date().toISOString(),
+      pending_physio_eval: isFisioDest ? true : (isEditing ? finalPatientData.pending_physio_eval : false),
+      pending_workshop_eval: isOficinaDest ? true : (isEditing ? finalPatientData.pending_workshop_eval : false),
     };
 
     try {
       await onSavePatient(patientToSave);
+      const savedId = patientToSave.id;
       resetAddModal();
+      
+      // Se for Escoliose, abre o prontuário especializado imediatamente após o cadastro
+      if (isEscoliose) {
+        onOpenScoliosis(savedId);
+      }
     } catch (err) {
       alert("Erro ao salvar. Verifique a conexão.");
     } finally {
@@ -149,16 +163,32 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
              <div className="flex justify-between items-start">
                 <div>
                    <h2 className="text-5xl font-black text-slate-800 tracking-tighter">{selectedPatient.name}</h2>
-                   <div className="flex gap-2 mt-4">
+                   <div className="flex flex-wrap gap-2 mt-4">
                       <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase ${selectedPatient.referring_type === 'Spontaneous' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
                          {selectedPatient.referring_type === 'Spontaneous' ? 'Entrada Espontânea' : 'Encaminhamento Direto'}
                       </span>
                       {selectedPatient.categories?.map((c: string) => (
                         <span key={c} className="bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full text-[9px] font-black uppercase">{c}</span>
                       ))}
+                      {selectedPatient.pending_physio_eval && <span className="bg-amber-100 text-amber-700 px-3 py-1.5 rounded-full text-[9px] font-black uppercase">Avaliação Clínica Pendente</span>}
+                      {selectedPatient.pending_workshop_eval && <span className="bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-full text-[9px] font-black uppercase">Aguardando Oficina</span>}
                    </div>
                 </div>
-                <button onClick={(e) => handleOpenEdit(selectedPatient, e)} className="bg-white text-slate-400 p-4 rounded-2xl hover:text-indigo-600 transition-all border border-slate-200 shadow-sm"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
+                <div className="flex gap-4">
+                  {(userRole === UserRole.GESTOR || userRole === UserRole.FISIOTERAPEUTA) && selectedPatient.categories.includes('Escoliose') && (
+                    <button 
+                      onClick={() => onOpenScoliosis(selectedPatient.id)}
+                      className="bg-indigo-600 text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                      Prontuário Especializado
+                    </button>
+                  )}
+                  <button onClick={(e) => handleOpenEdit(selectedPatient, e)} className="bg-white text-slate-400 p-4 rounded-2xl hover:text-indigo-600 transition-all border border-slate-200 shadow-sm"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
+                  {userRole === UserRole.GESTOR && (
+                    <button onClick={() => { if(confirm('Excluir paciente permanentemente?')) onDeletePatient(selectedPatient.id); }} className="bg-white text-rose-400 p-4 rounded-2xl hover:text-rose-600 transition-all border border-slate-200 shadow-sm"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                  )}
+                </div>
              </div>
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -228,7 +258,6 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                 </div>
              </div>
 
-             {/* CONTEÚDO DAS ABAS COM BARRA DE ROLAGEM VISÍVEL EM TODAS AS ETAPAS */}
              <div className="px-12 pb-12 flex-1 overflow-y-auto">
                 {activeFormTab === 'identificacao' && (
                   <div className="space-y-8 animate-fadeIn pt-4">
@@ -372,7 +401,6 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
 
                 {activeFormTab === 'clinico' && (
                   <div className="space-y-12 animate-fadeIn pt-4">
-                     {/* SETOR DE ATENDIMENTO - Único campo solicitado para esta etapa */}
                      <div className="space-y-6">
                         <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">SETOR DE ATENDIMENTO:</h4>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -396,7 +424,6 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                 )}
              </div>
 
-             {/* FOOTER DO MODAL */}
              <div className="p-12 border-t border-slate-50 bg-slate-50/20 flex gap-6">
                 <button 
                   onClick={() => {

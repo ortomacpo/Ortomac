@@ -21,7 +21,8 @@ export enum AppView {
   CALENDAR = 'calendar',
   FINANCES = 'finances',
   INDICATORS = 'indicators',
-  AI_INSIGHTS = 'ai_insights'
+  AI_INSIGHTS = 'ai_insights',
+  SCOLIOSIS_RECORD = 'scoliosis_record'
 }
 
 export enum WorkshopStatus {
@@ -43,6 +44,97 @@ export interface ClinicalNote {
   type: 'Evolution' | 'Evaluation' | 'SOAP';
 }
 
+export interface ScoliosisData {
+  // Anamnese
+  main_complaint?: string;
+  life_habits?: string;
+  history_current_past?: string;
+  family_history?: string;
+  past_treatments?: string;
+  
+  // Checklist de Saúde
+  has_surgeries?: boolean;
+  has_diabetes?: boolean;
+  has_fractures?: boolean;
+  has_cardiac_issues?: boolean;
+  has_allergies?: boolean;
+  has_others?: boolean;
+
+  // Exame Clínico
+  pain_type?: string;
+  medication?: string;
+  eva_scale?: number; 
+
+  // Maturidade & Hábitos
+  has_breasts?: boolean;
+  has_axillary_hair?: boolean;
+  menstruation_obs?: string;
+  worsening_factors?: string;
+  improvement_factors?: string;
+  sleep_obs?: string;
+  physical_activity_obs?: string;
+  activity_frequency?: string;
+  activity_duration?: string;
+  chronological_age?: number;
+
+  // Ângulo de Cobb
+  risser_scale?: number; 
+  cobb_toracica?: number;
+  cobb_lombar?: number;
+  cobb_toracolombar?: number;
+
+  // Avaliação Postural / Testes Específicos
+  inc_cervical_c7?: number;
+  inc_toracica_t12_1?: number;
+  inc_resultado_1?: number;
+  inc_toracica_t12_2?: number;
+  inc_sacro_s1?: number;
+  inc_resultado_2?: number;
+
+  rot_sentado_d?: number;
+  rot_sentado_e?: number;
+  rot_superior_d?: number;
+  rot_superior_e?: number;
+  rot_inferior_d?: number;
+  rot_inferior_e?: number;
+  equi_unipodal_d?: number;
+  equi_unipodal_e?: number;
+
+  // Novos Testes
+  scoliometer_toracica?: number;
+  scoliometer_lombar?: number;
+  
+  mmii_real_mid?: number;
+  mmii_real_mie?: number;
+  mmii_aparente_mid?: number;
+  mmii_aparente_mie?: number;
+
+  adams_side_d?: boolean;
+  adams_side_e?: boolean;
+  
+  lumbar_flexibility_cm?: number;
+
+  abdominal_strength_g3?: string;
+  abdominal_strength_g4?: string;
+  abdominal_strength_g5?: string;
+  
+  oblique_right?: string;
+  oblique_left?: string;
+  lower_abdominal_sim?: boolean;
+
+  // Diagnósticos e Planos Finais (Última Imagem)
+  physio_diagnosis?: string;
+  physio_plan?: string;
+
+  // Campos Adicionais
+  apex_level?: string;
+  adams_test_mm?: number;
+  rotation_degrees?: number;
+  treatment_goal?: string;
+  photo_urls?: string[];
+  is_finished?: boolean;
+}
+
 export interface Patient {
   id: string;
   name: string;
@@ -50,9 +142,7 @@ export interface Patient {
   email: string;
   birth_date?: string;
   responsible_name?: string;
-  // CPF of the legal representative for minors
   responsible_cpf?: string;
-  // Clinical screening observations
   triagem_obs?: string;
   address_street?: string;
   address_neighborhood?: string;
@@ -72,9 +162,16 @@ export interface Patient {
   
   last_visit: string;
   condition: string;
-  categories: string[]; // Alterado para string[] para suportar as novas especialidades
+  categories: string[]; 
   clinical_notes: ClinicalNote[];
   waiting_status?: WaitingStatus;
+
+  // Flags de Notificação
+  pending_physio_eval?: boolean;
+  pending_workshop_eval?: boolean;
+  
+  // Dados Especializados
+  scoliosis_record?: ScoliosisData;
 }
 
 export interface InventoryItem {

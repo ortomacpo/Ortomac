@@ -2,16 +2,18 @@
 import React from 'react';
 import { MOCK_FINANCE } from '../constants';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { AppView, Patient, WorkshopOrder, Appointment } from '../types';
+import { AppView, Patient, WorkshopOrder, Appointment, UserRole } from '../types';
 
 interface DashboardProps {
   onViewChange: (view: AppView) => void;
+  onOpenScoliosis: (patientId: string) => void;
   patients: Patient[];
   orders: WorkshopOrder[];
   appointments: Appointment[];
+  userRole?: UserRole;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onViewChange, patients, orders, appointments }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onOpenScoliosis, patients, orders, appointments, userRole }) => {
   const stats = [
     { label: 'Sessões Hoje', value: appointments.length, icon: '📅', trend: '+2', bg: 'bg-indigo-50/50' },
     { label: 'Oficina Ativa', value: orders.length, icon: '🛠️', trend: '4 urgentes', bg: 'bg-amber-50/50' },
@@ -19,8 +21,68 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, patients, orders, a
     { label: 'Novos Pacientes', value: 12, icon: '✨', trend: '+15% mês', bg: 'bg-emerald-50/50' },
   ];
 
+  // Filtra pendências por papel. Gestor vê tudo.
+  const pendingActions = patients.filter(p => {
+    if (userRole === UserRole.GESTOR) return p.pending_physio_eval || p.pending_workshop_eval;
+    if (userRole === UserRole.FISIOTERAPEUTA) return p.pending_physio_eval;
+    if (userRole === UserRole.TECNICO) return p.pending_workshop_eval;
+    return false;
+  });
+
   return (
     <div className="space-y-8 animate-fadeIn">
+      
+      {/* SEÇÃO DE NOTIFICAÇÕES CRÍTICAS */}
+      {pendingActions.length > 0 && (
+        <div className="bg-amber-50 border border-amber-100 p-8 rounded-[3rem] animate-fadeInUp">
+           <div className="flex items-center gap-4 mb-6">
+              <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-white text-xl animate-pulse">🔔</div>
+              <div>
+                 <h3 className="text-xl font-black text-amber-900 tracking-tight">Avaliações Pendentes</h3>
+                 <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">
+                    {userRole === UserRole.GESTOR 
+                      ? `Existem ${pendingActions.length} paciente(s) com pendências clínicas ou técnicas.`
+                      : `Você possui ${pendingActions.length} paciente(s) aguardando atendimento.`
+                    }
+                 </p>
+              </div>
+           </div>
+           
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {pendingActions.map(patient => (
+                <div key={patient.id} className="bg-white p-6 rounded-[2rem] border border-amber-100 shadow-sm flex flex-col justify-between hover:scale-[1.02] transition-all cursor-pointer group">
+                   <div>
+                      <h4 className="font-black text-slate-800">{patient.name}</h4>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {patient.categories.map(cat => (
+                          <span key={cat} className="text-[8px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100 uppercase tracking-widest">{cat}</span>
+                        ))}
+                      </div>
+                      <div className="mt-2 space-y-1">
+                        {patient.pending_physio_eval && <p className="text-[8px] font-black text-rose-500 uppercase tracking-tighter">● Pendência Clínica</p>}
+                        {patient.pending_workshop_eval && <p className="text-[8px] font-black text-indigo-500 uppercase tracking-tighter">● Pendência Técnica</p>}
+                      </div>
+                   </div>
+                   <button 
+                    onClick={() => {
+                        if(patient.categories.includes('Escoliose')) {
+                            onOpenScoliosis(patient.id);
+                        } else if (patient.categories.includes('Oficina')) {
+                            onViewChange(AppView.WORKSHOP);
+                        } else {
+                            onViewChange(AppView.PATIENTS);
+                        }
+                    }}
+                    className="mt-6 w-full bg-amber-500 text-white py-3 rounded-xl text-[9px] font-black uppercase tracking-widest group-hover:bg-amber-600 transition-all"
+                   >
+                      Tratar Pendência ➔
+                   </button>
+                </div>
+              ))}
+           </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, i) => (
           <div key={i} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
