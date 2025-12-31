@@ -169,7 +169,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                          <div><label className="text-[8px] font-black text-slate-300 uppercase">Telefone</label><p className="font-black text-slate-700">{selectedPatient.phone || '--'}</p></div>
                          <div><label className="text-[8px] font-black text-slate-300 uppercase">Residência</label>
                             <p className="font-bold text-slate-600 text-xs">
-                               {selectedPatient.address_street || 'Não informado'} {selectedPatient.address_city ? `- ${selectedPatient.address_city}` : ''}
+                               {selectedPatient.address_street || 'Não informado'} {selectedPatient.address_city ? `- ${selectedPatient.address_city}` : ''} {selectedPatient.address_state ? `, ${selectedPatient.address_state}` : ''}
                             </p>
                          </div>
                       </div>
@@ -228,10 +228,10 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                 </div>
              </div>
 
-             {/* CONTEÚDO DAS ABAS */}
-             <div className="px-12 pb-12 flex-1 overflow-y-auto scrollbar-hide">
+             {/* CONTEÚDO DAS ABAS COM BARRA DE ROLAGEM VISÍVEL EM TODAS AS ETAPAS */}
+             <div className="px-12 pb-12 flex-1 overflow-y-auto">
                 {activeFormTab === 'identificacao' && (
-                  <div className="space-y-8 animate-fadeIn">
+                  <div className="space-y-8 animate-fadeIn pt-4">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="md:col-span-2">
                            <label className="text-[9px] font-black text-slate-400 uppercase ml-2 mb-2 block">Nome Completo</label>
@@ -250,7 +250,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                 )}
 
                 {activeFormTab === 'endereco' && (
-                  <div className="space-y-6 animate-fadeIn">
+                  <div className="space-y-6 animate-fadeIn pt-4">
                      <div className="grid grid-cols-6 gap-4">
                         <div className="col-span-4">
                            <label className="text-[9px] font-black text-slate-400 uppercase ml-2 mb-2 block">Rua/Logradouro</label>
@@ -260,20 +260,24 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                            <label className="text-[9px] font-black text-slate-400 uppercase ml-2 mb-2 block">CEP</label>
                            <input placeholder="00000-000" className="w-full p-6 bg-slate-50/50 border border-slate-100 rounded-[2rem] font-black text-sm outline-none" value={newPatientData.address_cep} onChange={e => setNewPatientData({...newPatientData, address_cep: e.target.value})} />
                         </div>
-                        <div className="col-span-3">
+                        <div className="col-span-2">
                            <label className="text-[9px] font-black text-slate-400 uppercase ml-2 mb-2 block">Bairro</label>
                            <input placeholder="Bairro..." className="w-full p-6 bg-slate-50/50 border border-slate-100 rounded-[2rem] font-black text-sm outline-none" value={newPatientData.address_neighborhood} onChange={e => setNewPatientData({...newPatientData, address_neighborhood: e.target.value})} />
                         </div>
-                        <div className="col-span-3">
+                        <div className="col-span-2">
                            <label className="text-[9px] font-black text-slate-400 uppercase ml-2 mb-2 block">Cidade</label>
                            <input placeholder="Cidade..." className="w-full p-6 bg-slate-50/50 border border-slate-100 rounded-[2rem] font-black text-sm outline-none" value={newPatientData.address_city} onChange={e => setNewPatientData({...newPatientData, address_city: e.target.value})} />
+                        </div>
+                        <div className="col-span-2">
+                           <label className="text-[9px] font-black text-slate-400 uppercase ml-2 mb-2 block">Estado</label>
+                           <input placeholder="UF" className="w-full p-6 bg-slate-50/50 border border-slate-100 rounded-[2rem] font-black text-sm outline-none" value={newPatientData.address_state} onChange={e => setNewPatientData({...newPatientData, address_state: e.target.value})} />
                         </div>
                      </div>
                   </div>
                 )}
 
                 {activeFormTab === 'encaminhamento' && (
-                  <div className="space-y-10 animate-fadeIn">
+                  <div className="space-y-10 animate-fadeIn pt-4">
                      <div className="space-y-4">
                         <h4 className="text-xl font-black text-slate-800 tracking-tight">O paciente veio por:</h4>
                         <div className="grid grid-cols-2 gap-4">
@@ -307,7 +311,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                 )}
 
                 {activeFormTab === 'faturamento' && (
-                  <div className="space-y-12 animate-fadeIn">
+                  <div className="space-y-12 animate-fadeIn pt-4">
                      <div className="space-y-6">
                         <h4 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">4. DADOS FISCAIS (NF)</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -351,11 +355,14 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                               <div className="col-span-2">
                                  <input placeholder="CEP" className="w-full p-5 bg-white border border-slate-200 rounded-2xl text-sm font-bold shadow-sm" value={newPatientData.nf_address_cep} onChange={e => setNewPatientData({...newPatientData, nf_address_cep: e.target.value})} />
                               </div>
-                              <div className="col-span-3">
+                              <div className="col-span-2">
                                  <input placeholder="Bairro" className="w-full p-5 bg-white border border-slate-200 rounded-2xl text-sm font-bold shadow-sm" value={newPatientData.nf_address_neighborhood} onChange={e => setNewPatientData({...newPatientData, nf_address_neighborhood: e.target.value})} />
                               </div>
-                              <div className="col-span-3">
+                              <div className="col-span-2">
                                  <input placeholder="Cidade" className="w-full p-5 bg-white border border-slate-200 rounded-2xl text-sm font-bold shadow-sm" value={newPatientData.nf_address_city} onChange={e => setNewPatientData({...newPatientData, nf_address_city: e.target.value})} />
+                              </div>
+                              <div className="col-span-2">
+                                 <input placeholder="Estado (UF)" className="w-full p-5 bg-white border border-slate-200 rounded-2xl text-sm font-bold shadow-sm" value={newPatientData.nf_address_state} onChange={e => setNewPatientData({...newPatientData, nf_address_state: e.target.value})} />
                               </div>
                            </div>
                         )}
@@ -364,8 +371,8 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                 )}
 
                 {activeFormTab === 'clinico' && (
-                  <div className="space-y-12 animate-fadeIn">
-                     {/* SETOR DE ATENDIMENTO (Solicitado) */}
+                  <div className="space-y-12 animate-fadeIn pt-4">
+                     {/* SETOR DE ATENDIMENTO - Único campo solicitado para esta etapa */}
                      <div className="space-y-6">
                         <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">SETOR DE ATENDIMENTO:</h4>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -384,15 +391,6 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                              </button>
                            ))}
                         </div>
-                     </div>
-
-                     <div className="space-y-6">
-                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2 block">Diagnóstico Principal</label>
-                        <input placeholder="Ex: Escoliose Idiopática..." className="w-full p-7 bg-slate-50 border border-slate-100 rounded-[2rem] font-black text-sm outline-none" value={newPatientData.condition} onChange={e => setNewPatientData({...newPatientData, condition: e.target.value})} />
-                     </div>
-                     <div className="space-y-6">
-                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2 block">Notas de Triagem</label>
-                        <textarea placeholder="Resumo do caso clínico..." className="w-full p-8 bg-slate-50 border border-slate-100 rounded-[3rem] font-medium text-sm min-h-[220px] resize-none outline-none focus:bg-white transition-all shadow-inner" value={newPatientData.triagem_obs} onChange={e => setNewPatientData({...newPatientData, triagem_obs: e.target.value})} />
                      </div>
                   </div>
                 )}
