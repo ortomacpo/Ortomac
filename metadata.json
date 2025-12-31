@@ -1,7 +1,9 @@
 {
-  "name": "Ortomac",
-  "description": "Uma plataforma integrada para gestão de clínicas de fisioterapia e oficinas ortopédicas, com acompanhamento de pacientes, ordens de serviço e inteligência artificial para análise de progresso.",
+  "name": "OrtoPhysio Pro Enterprise",
+  "description": "Gestão completa para clínicas de fisioterapia e oficinas de próteses.",
   "requestFramePermissions": [
-    "camera"
+    "camera",
+    "microphone",
+    "geolocation"
   ]
 }
