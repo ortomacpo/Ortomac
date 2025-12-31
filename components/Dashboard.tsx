@@ -29,6 +29,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onOpenScoliosis, pa
     return false;
   });
 
+  const handleAction = (patient: Patient) => {
+    const categories = patient.categories || [];
+    
+    // Prioridade 1: Escoliose (Prontuário especializado)
+    if (categories.includes('Escoliose') && patient.pending_physio_eval) {
+      onOpenScoliosis(patient.id);
+      return;
+    }
+
+    // Prioridade 2: Oficina (Kanban de Produção)
+    if ((categories.includes('Oficina') || categories.includes('Amputados')) && patient.pending_workshop_eval) {
+      onViewChange(AppView.WORKSHOP);
+      return;
+    }
+
+    // Fallback: Lista de Pacientes
+    onViewChange(AppView.PATIENTS);
+  };
+
   return (
     <div className="space-y-8 animate-fadeIn">
       
@@ -38,11 +57,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onOpenScoliosis, pa
            <div className="flex items-center gap-4 mb-6">
               <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-white text-xl animate-pulse">🔔</div>
               <div>
-                 <h3 className="text-xl font-black text-amber-900 tracking-tight">Avaliações Pendentes</h3>
+                 <h3 className="text-xl font-black text-amber-900 tracking-tight">Atendimentos Aguardando</h3>
                  <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">
                     {userRole === UserRole.GESTOR 
-                      ? `Existem ${pendingActions.length} paciente(s) com pendências clínicas ou técnicas.`
-                      : `Você possui ${pendingActions.length} paciente(s) aguardando atendimento.`
+                      ? `Existem ${pendingActions.length} paciente(s) prontos para avaliação clínica ou técnica.`
+                      : `Você possui ${pendingActions.length} paciente(s) na sua fila de hoje.`
                     }
                  </p>
               </div>
@@ -50,32 +69,40 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onOpenScoliosis, pa
            
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {pendingActions.map(patient => (
-                <div key={patient.id} className="bg-white p-6 rounded-[2rem] border border-amber-100 shadow-sm flex flex-col justify-between hover:scale-[1.02] transition-all cursor-pointer group">
+                <div 
+                  key={patient.id} 
+                  onClick={() => handleAction(patient)}
+                  className="bg-white p-6 rounded-[2rem] border border-amber-100 shadow-sm flex flex-col justify-between hover:scale-[1.02] active:scale-95 transition-all cursor-pointer group"
+                >
                    <div>
-                      <h4 className="font-black text-slate-800">{patient.name}</h4>
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-black text-slate-800 text-sm">{patient.name}</h4>
+                        <span className="text-[7px] font-black bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full uppercase tracking-widest">URGENTE</span>
+                      </div>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {patient.categories.map(cat => (
+                        {(patient.categories || []).map(cat => (
                           <span key={cat} className="text-[8px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100 uppercase tracking-widest">{cat}</span>
                         ))}
                       </div>
-                      <div className="mt-2 space-y-1">
-                        {patient.pending_physio_eval && <p className="text-[8px] font-black text-rose-500 uppercase tracking-tighter">● Pendência Clínica</p>}
-                        {patient.pending_workshop_eval && <p className="text-[8px] font-black text-indigo-500 uppercase tracking-tighter">● Pendência Técnica</p>}
+                      <div className="mt-4 space-y-1">
+                        {patient.pending_physio_eval && (
+                          <div className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                            <p className="text-[8px] font-black text-rose-500 uppercase tracking-widest">Aguardando Fisioterapeuta</p>
+                          </div>
+                        )}
+                        {patient.pending_workshop_eval && (
+                          <div className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                            <p className="text-[8px] font-black text-indigo-500 uppercase tracking-widest">Aguardando Técnico Oficina</p>
+                          </div>
+                        )}
                       </div>
                    </div>
                    <button 
-                    onClick={() => {
-                        if(patient.categories.includes('Escoliose')) {
-                            onOpenScoliosis(patient.id);
-                        } else if (patient.categories.includes('Oficina')) {
-                            onViewChange(AppView.WORKSHOP);
-                        } else {
-                            onViewChange(AppView.PATIENTS);
-                        }
-                    }}
-                    className="mt-6 w-full bg-amber-500 text-white py-3 rounded-xl text-[9px] font-black uppercase tracking-widest group-hover:bg-amber-600 transition-all"
+                    className="mt-6 w-full bg-slate-900 text-white py-3.5 rounded-xl text-[9px] font-black uppercase tracking-widest group-hover:bg-indigo-600 transition-all flex items-center justify-center gap-2"
                    >
-                      Tratar Pendência ➔
+                      Iniciar Atendimento ➔
                    </button>
                 </div>
               ))}

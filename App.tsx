@@ -17,7 +17,7 @@ import ScoliosisRecord from './components/ScoliosisRecord.tsx';
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
-  const [selectedScoliosisPatientId, setSelectedScoliosisPatientId] = useState<string | null>(null);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   
   const [patients, setPatients] = useState<Patient[]>([]);
   const [orders, setOrders] = useState<WorkshopOrder[]>([]);
@@ -32,7 +32,6 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // FUNÇÃO DE NORMALIZAÇÃO: Garante que dados em metadata sejam acessíveis como propriedades normais
   const normalizeData = (item: any) => {
     const meta = item.metadata || {};
     return { ...meta, ...item };
@@ -75,10 +74,6 @@ const App: React.FC = () => {
     }
   }, [currentUser, fetchAllData]);
 
-  /**
-   * SALVAMENTO RESILIENTE (A solução para o erro PGRST204)
-   * Move automaticamente campos que não são colunas básicas para o campo 'metadata'.
-   */
   const resilientSave = async (table: string, data: any, essentialColumns: string[]) => {
     try {
       const cleanData = JSON.parse(JSON.stringify(data));
@@ -98,22 +93,18 @@ const App: React.FC = () => {
       const { error } = await supabase.from(table).upsert(payload);
       
       if (error) {
-        // Se houver erro de coluna, o relatório agora é ainda mais detalhado
-        const errorMsg = `ERRO NO BANCO (${error.code}): ${error.message}\n\nDetalhes: ${error.details || 'N/A'}\n\nDICA: Verifique se a tabela '${table}' possui a coluna 'metadata' do tipo JSONB.`;
-        console.error("❌ [SUPABASE ERROR]", error);
-        alert(errorMsg);
+        alert(`Erro (${error.code}): ${error.message}`);
         return false;
       }
 
       await fetchAllData();
       return true;
     } catch (e: any) {
-      alert(`Falha Crítica de Conexão: ${e.message}`);
+      alert(`Falha Crítica: ${e.message}`);
       return false;
     }
   };
 
-  // Funções específicas usando o salvamento resiliente
   const handleSavePatient = (patient: Patient) => 
     resilientSave('patients', patient, ['id', 'name', 'phone', 'email', 'condition', 'last_visit']);
 
@@ -127,7 +118,7 @@ const App: React.FC = () => {
     resilientSave('appointments', app, ['id', 'patient_id', 'patient_name', 'time', 'type', 'status', 'appointment_date']);
 
   const openScoliosisRecord = (patientId: string) => {
-    setSelectedScoliosisPatientId(patientId);
+    setSelectedPatientId(patientId);
     setCurrentView(AppView.SCOLIOSIS_RECORD);
   };
 
@@ -135,7 +126,13 @@ const App: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] text-slate-900 font-['Inter']">
-      <Sidebar currentView={currentView} onViewChange={setCurrentView} userRole={currentUser.role} onLogout={() => { setCurrentUser(null); localStorage.removeItem('ortho_session'); }} userName={currentUser.name} />
+      <Sidebar 
+        currentView={currentView} 
+        onViewChange={(v) => { setCurrentView(v); setSelectedPatientId(null); }} 
+        userRole={currentUser.role} 
+        onLogout={() => { setCurrentUser(null); localStorage.removeItem('ortho_session'); }} 
+        userName={currentUser.name} 
+      />
       <main className="flex-1 p-6 md:p-10 overflow-y-auto">
         <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="animate-fadeInLeft">
@@ -158,9 +155,36 @@ const App: React.FC = () => {
         </header>
 
         <div className="animate-fadeInUp">
-          {currentView === AppView.DASHBOARD && <Dashboard onViewChange={setCurrentView} onOpenScoliosis={openScoliosisRecord} patients={patients} orders={orders} appointments={appointments} userRole={currentUser.role} />}
-          {currentView === AppView.PATIENTS && <PatientManagement userRole={currentUser.role} patients={patients} onSavePatient={handleSavePatient} onDeletePatient={async (id) => { await supabase.from('patients').delete().eq('id', id); fetchAllData(); }} onOpenScoliosis={openScoliosisRecord} />}
-          {currentView === AppView.WORKSHOP && <WorkshopManagement userRole={currentUser.role} orders={orders} patients={patients} onSaveOrder={handleSaveOrder} />}
+          {currentView === AppView.DASHBOARD && (
+            <Dashboard 
+              onViewChange={setCurrentView} 
+              onOpenScoliosis={openScoliosisRecord} 
+              patients={patients} 
+              orders={orders} 
+              appointments={appointments} 
+              userRole={currentUser.role} 
+            />
+          )}
+          
+          {currentView === AppView.PATIENTS && (
+            <PatientManagement 
+              userRole={currentUser.role} 
+              patients={patients} 
+              onSavePatient={handleSavePatient} 
+              onDeletePatient={async (id) => { await supabase.from('patients').delete().eq('id', id); fetchAllData(); }} 
+              onOpenScoliosis={openScoliosisRecord} 
+            />
+          )}
+          
+          {currentView === AppView.WORKSHOP && (
+            <WorkshopManagement 
+              userRole={currentUser.role} 
+              orders={orders} 
+              patients={patients} 
+              onSaveOrder={handleSaveOrder} 
+            />
+          )}
+          
           {currentView === AppView.INVENTORY && <InventoryManagement items={inventory} onUpdateInventory={handleUpdateInventory} />}
           {currentView === AppView.FINANCES && <FinanceDashboard />}
           {currentView === AppView.INDICATORS && <IndicatorsView />}
@@ -169,28 +193,30 @@ const App: React.FC = () => {
           
           {currentView === AppView.SCOLIOSIS_RECORD && (
             (() => {
-                const targetPatient = selectedScoliosisPatientId 
-                    ? patients.find(p => p.id === selectedScoliosisPatientId)
+                const targetPatient = selectedPatientId 
+                    ? patients.find(p => p.id === selectedPatientId)
                     : patients.find(p => p.pending_physio_eval && p.categories?.includes('Escoliose'));
 
                 return targetPatient ? (
                     <ScoliosisRecord 
                         patient={targetPatient} 
                         onSave={async (p) => { 
-                          const success = await handleSavePatient(p); 
+                          // Remove a pendência ao salvar o prontuário
+                          const updatedP = { ...p, pending_physio_eval: false };
+                          const success = await handleSavePatient(updatedP); 
                           if (success) { 
                             setCurrentView(AppView.DASHBOARD); 
-                            setSelectedScoliosisPatientId(null); 
+                            setSelectedPatientId(null); 
                           }
                         }} 
                         onBack={() => {
                           setCurrentView(AppView.DASHBOARD);
-                          setSelectedScoliosisPatientId(null);
+                          setSelectedPatientId(null);
                         }} 
                     />
                 ) : (
                     <div className="text-center py-20 bg-white rounded-[3rem] border border-slate-100">
-                        <p className="font-black text-slate-400 uppercase tracking-widest">Nenhuma avaliação pendente encontrada.</p>
+                        <p className="font-black text-slate-400 uppercase tracking-widest">A avaliação foi finalizada ou não foi encontrada.</p>
                         <button onClick={() => setCurrentView(AppView.DASHBOARD)} className="mt-6 text-indigo-600 font-black uppercase text-[10px] tracking-widest">Voltar ao Painel</button>
                     </div>
                 );
