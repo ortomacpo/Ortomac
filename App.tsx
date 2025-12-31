@@ -25,7 +25,6 @@ const App: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // 1. CARREGAMENTO DA SESSÃO
   useEffect(() => {
     const savedUser = localStorage.getItem('ortho_session');
     if (savedUser) {
@@ -33,7 +32,6 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // 2. FUNÇÃO MESTRA DE SINCRONIZAÇÃO
   const fetchAllData = useCallback(async () => {
     if (!currentUser) return;
     setIsSyncing(true);
@@ -41,7 +39,22 @@ const App: React.FC = () => {
     try {
       const { data: pData, error: pError } = await supabase.from('patients').select('*').order('name');
       if (pError) throw pError;
-      if (pData) setPatients(pData.map(p => ({ ...p, ...(p.metadata || {}) })));
+      
+      if (pData) {
+        setPatients(pData.map(p => {
+          const meta = p.metadata || {};
+          return { 
+            ...p, 
+            ...meta,
+            // Prioriza colunas reais, mas aceita dados do metadado se a coluna for nula
+            id: p.id,
+            name: p.name,
+            pending_physio_eval: p.pending_physio_eval ?? meta.pending_physio_eval ?? false,
+            pending_workshop_eval: p.pending_workshop_eval ?? meta.pending_workshop_eval ?? false,
+            scoliosis_record: p.scoliosis_record || meta.scoliosis_record || null
+          };
+        }));
+      }
 
       const { data: oData, error: oError } = await supabase.from('workshop_orders').select('*').order('created_at', { ascending: false });
       if (oError) throw oError;
@@ -73,38 +86,48 @@ const App: React.FC = () => {
 
   const handleSavePatient = async (patient: Patient) => {
     try {
-      const { clinical_notes, scoliosis_record, ...rest } = patient;
-      const anchorFields = ['id', 'name', 'phone', 'email', 'condition', 'last_visit', 'pending_physio_eval', 'pending_workshop_eval'];
+      console.log("🚀 [SISTEMA] Iniciando salvamento resiliente...");
+      
+      const cleanPatient = JSON.parse(JSON.stringify(patient));
+      
+      // Lista mínima de campos que costumam ser colunas padrão
+      // Removi 'pending_physio_eval' e outros para evitar o erro PGRST204
+      const essentialFields = ['id', 'name', 'phone', 'email', 'condition', 'last_visit'];
+      
       const payload: any = {};
       const metadata: any = {};
 
-      Object.keys(rest).forEach(key => {
-        if (anchorFields.includes(key)) {
-          payload[key] = (rest as any)[key];
+      // Separa o que é essencial do que é estendido
+      Object.keys(cleanPatient).forEach(key => {
+        if (essentialFields.includes(key)) {
+          payload[key] = cleanPatient[key];
         } else {
-          metadata[key] = (rest as any)[key];
+          metadata[key] = cleanPatient[key];
         }
       });
       
-      // Persistência estruturada em JSONB no campo metadata para campos dinâmicos
-      payload.metadata = { 
-        ...metadata, 
-        scoliosis_record: scoliosis_record || (patient.scoliosis_record || null) 
-      };
+      // Agrupa tudo o mais em metadata para garantir que o Supabase aceite
+      payload.metadata = metadata;
 
-      const { error } = await supabase.from('patients').upsert(payload, { onConflict: 'id' });
+      console.log("📤 [SISTEMA] Enviando payload:", payload);
+
+      const { error } = await supabase.from('patients').upsert(payload);
       
       if (error) {
-        console.error("Erro Supabase:", error);
-        throw new Error(`Erro ao salvar no banco: ${error.message}`);
+        const errorMsg = `ERRO TÉCNICO (${error.code}): ${error.message}. Dica: Verifique se a coluna 'metadata' (do tipo JSONB) existe na sua tabela 'patients'.`;
+        console.error("❌ [ERRO SUPABASE]", error);
+        alert(errorMsg);
+        return false;
       }
 
+      console.log("✅ [SISTEMA] Salvo com sucesso!");
       await fetchAllData();
       return true;
     } catch (e: any) {
-      console.error("Erro Crítico no Salvamento:", e);
-      alert(e.message || "Erro desconhecido ao salvar paciente.");
-      throw e;
+      const msg = `Falha Crítica: ${e.message}`;
+      console.error("❌ [FALHA GERAL]", e);
+      alert(msg);
+      return false;
     }
   };
 

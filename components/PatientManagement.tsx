@@ -60,7 +60,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
     
     setIsSaving(true);
     try {
-      const newId = isEditing ? newPatientData.id : crypto.randomUUID();
+      const newId = isEditing ? newPatientData.id : (window.crypto?.randomUUID ? window.crypto.randomUUID() : Math.random().toString(36).substring(2, 15));
       
       const finalPatientData = { ...newPatientData };
       if (billingAddressMode === 'same') {
@@ -84,20 +84,19 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
         pending_workshop_eval: isOficinaDest ? true : (isEditing ? finalPatientData.pending_workshop_eval : false),
       };
 
-      await onSavePatient(patientToSave);
+      const success = await onSavePatient(patientToSave);
       
-      const savedId = patientToSave.id;
-      resetAddModal();
-      
-      // Feedback visual de sucesso e redirecionamento se necessário
-      if (isEscoliose) {
-        onOpenScoliosis(savedId);
-      } else {
-        alert("Paciente cadastrado com sucesso!");
+      if (success) {
+        resetAddModal();
+        if (isEscoliose) {
+          onOpenScoliosis(patientToSave.id);
+        } else {
+          alert("Registro concluído com sucesso!");
+        }
       }
     } catch (err: any) {
       console.error("Erro no formulário:", err);
-      alert("Houve um erro ao processar o cadastro. Detalhes: " + (err.message || "Erro de conexão"));
+      alert(`Falha no formulário: ${err.message || 'Erro desconhecido'}`);
     } finally {
       setIsSaving(false);
     }
@@ -133,7 +132,6 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[calc(100vh-160px)] animate-fadeIn">
       
-      {/* LISTA DE PACIENTES */}
       <div className="lg:col-span-4 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col overflow-hidden">
         <div className="p-6 border-b border-slate-50 space-y-4 bg-slate-50/30">
           <div className="flex justify-between items-center">
@@ -163,7 +161,6 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
         </div>
       </div>
 
-      {/* DETALHES DO PACIENTE */}
       <div className="lg:col-span-8 bg-white rounded-[3.5rem] border border-slate-100 shadow-sm flex flex-col overflow-hidden relative">
         {selectedPatient ? (
           <div className="p-12 space-y-12 overflow-y-auto scrollbar-hide">
@@ -243,12 +240,10 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
         )}
       </div>
 
-      {/* MODAL DE CADASTRO */}
       {showAddModal && (
         <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-3xl z-[500] flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-4xl rounded-[4rem] shadow-2xl flex flex-col max-h-[95vh] overflow-hidden animate-fadeInUp">
              
-             {/* HEADER COM PROGRESSO */}
              <div className="p-8 px-12 pt-10">
                 <div className="flex justify-between items-start mb-6">
                    <div>
@@ -440,6 +435,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                       resetAddModal();
                     }
                   }} 
+                  disabled={isSaving}
                   className="flex-1 py-7 bg-white border border-slate-200 rounded-[2.5rem] font-black uppercase text-[12px] tracking-widest text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-all shadow-sm"
                 >
                   {currentStep === 1 ? 'CANCELAR' : 'VOLTAR'}
@@ -448,6 +444,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ userRole, patient
                 {activeFormTab !== 'clinico' ? (
                    <button 
                      onClick={() => setActiveFormTab(tabs[currentStep])} 
+                     disabled={isSaving}
                      className="flex-1 py-7 bg-indigo-600 text-white rounded-[2.5rem] font-black uppercase text-[12px] tracking-widest shadow-2xl shadow-indigo-200 hover:bg-indigo-700 transition-all"
                    >
                      PRÓXIMA ETAPA ➔
