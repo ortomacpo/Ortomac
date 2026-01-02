@@ -1,5 +1,5 @@
 
-export type AppView = 'dashboard' | 'patients' | 'workshop' | 'inventory' | 'calendar' | 'finances' | 'indicators' | 'ai_insights';
+export type AppView = 'dashboard' | 'patients' | 'workshop' | 'inventory' | 'ai_insights';
 
 export enum UserRole {
   GESTOR = 'GESTOR',
@@ -10,7 +10,16 @@ export enum UserRole {
 
 export interface User { id: string; name: string; email: string; role: UserRole; }
 
-// Interface for Scoliosis clinical data
+// Fixed: Added ClinicalNote interface to support patient history tracking
+export interface ClinicalNote {
+  id: string;
+  date: string;
+  professional: string;
+  content: string;
+  type: 'Evolution' | 'Evaluation' | string;
+}
+
+// Fixed: Added ScoliosisData interface for clinical assessment records
 export interface ScoliosisData {
   main_complaint?: string;
   cobb_toracica?: number;
@@ -26,8 +35,10 @@ export interface Patient {
   last_visit: string;
   condition: string;
   categories: string[];
-  clinical_notes?: any[];
+  // Fixed: Added support for clinical notes and specialized assessment records
+  clinical_notes?: ClinicalNote[];
   scoliosis_record?: ScoliosisData;
+  pending_physio_eval?: boolean;
 }
 
 export enum WorkshopStatus {
@@ -47,7 +58,6 @@ export interface WorkOrder {
   status: WorkshopStatus | string;
   deadline: string;
   price?: number;
-  updatedAt?: any;
 }
 
 export interface InventoryItem {
@@ -57,23 +67,24 @@ export interface InventoryItem {
   quantity: number;
   unit: string;
   min_quantity: number;
-  // Added properties used in components and mock data
+  // Fixed: Added stock tracking properties used throughout the application
   stock?: number;
   minStock?: number;
   minQuantity?: number;
 }
 
+// Fixed: Added Appointment interface to handle clinical scheduling
 export interface Appointment {
   id: string;
   patient_id: string;
   patient_name: string;
   time: string;
   appointment_date: string;
-  type: 'Physio' | 'Workshop';
-  status: string;
+  type: 'Physio' | 'Workshop' | string;
+  status: 'confirmed' | 'pending' | 'cancelled' | string;
 }
 
-// Interface for financial history records
+// Fixed: Added FinancialRecord interface for business reporting
 export interface FinancialRecord {
   date: string;
   revenue: number;

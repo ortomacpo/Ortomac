@@ -1,55 +1,85 @@
-import React, { useState } from 'react';
-import { AppView, User, UserRole } from './types.ts';
+import React, { useState, useEffect } from 'react';
+import { AppView, User, Patient, WorkOrder, InventoryItem } from './types.ts';
+import { isFirebaseReady } from './services/firebaseConfig.ts';
+import { subscribeToCollection } from './services/dataService.ts';
 import Sidebar from './components/Sidebar.tsx';
 import Dashboard from './components/Dashboard.tsx';
-import AIAssistant from './components/AIAssistant.tsx';
+import PatientManagement from './components/PatientManagement.tsx';
 import WorkshopManagement from './components/WorkshopManagement.tsx';
+import InventoryManagement from './components/InventoryManagement.tsx';
+import AIAssistant from './components/AIAssistant.tsx';
 import Login from './components/Login.tsx';
+import { MOCK_PATIENTS, MOCK_ORDERS, MOCK_INVENTORY } from './constants.tsx';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<AppView>('dashboard');
+  
+  const [patients, setPatients] = useState<Patient[]>(MOCK_PATIENTS);
+  const [orders, setOrders] = useState<WorkOrder[]>(MOCK_ORDERS);
+  const [inventory, setInventory] = useState<InventoryItem[]>(MOCK_INVENTORY);
+
+  useEffect(() => {
+    if (isFirebaseReady) {
+      const unsubPatients = subscribeToCollection('patients', setPatients);
+      const unsubOrders = subscribeToCollection('orders', setOrders);
+      const unsubInventory = subscribeToCollection('inventory', setInventory);
+      return () => { unsubPatients(); unsubOrders(); unsubInventory(); };
+    }
+  }, []);
 
   if (!user) return <Login onLogin={setUser} />;
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
-      <aside className="w-72 bg-white border-r border-slate-100 hidden lg:flex flex-col p-8">
-        <div className="flex items-center gap-3 mb-12">
-          <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-black italic shadow-xl text-xl">OP</div>
-          <span className="text-xl font-black text-slate-800 tracking-tighter">OrthoPhysio</span>
-        </div>
-        <nav className="space-y-2">
-          {[
-            { id: 'dashboard', label: 'Painel', icon: '📊' },
-            { id: 'calendar', label: 'Agenda', icon: '📅' },
-            { id: 'workshop', label: 'Oficina', icon: '🛠️' },
-            { id: 'ai_insights', label: 'IA Cérebro', icon: '✨' }
-          ].map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setView(item.id as AppView)}
-              className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all ${view === item.id ? 'bg-slate-900 text-white font-bold shadow-xl' : 'text-slate-400 hover:bg-slate-50'}`}
-            >
-              <span className="text-lg">{item.icon}</span>
-              <span className="text-[11px] font-black uppercase tracking-wider">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-      </aside>
+      <Sidebar 
+        currentView={view} 
+        onViewChange={setView} 
+        userRole={user.role} 
+        userName={user.name} 
+        onLogout={() => setUser(null)} 
+      />
 
       <main className="flex-1 p-8 lg:p-12 overflow-y-auto">
         <header className="flex justify-between items-center mb-10">
           <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">{view}</h1>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Bem-vindo, {user.name}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">{view}</h1>
+              {isFirebaseReady && <span className="bg-emerald-500 w-2 h-2 rounded-full animate-pulse" title="Conectado ao Cloud"></span>}
+            </div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Painel OrtoPhysio Pro</p>
           </div>
         </header>
 
         <div className="animate-fadeIn">
-          {view === 'dashboard' && <Dashboard />}
+          {view === 'dashboard' && (
+            <Dashboard 
+              patients={patients} 
+              orders={orders} 
+              onViewChange={setView} 
+            />
+          )}
+          {view === 'patients' && (
+            <PatientManagement 
+              patients={patients} 
+              userRole={user.role}
+              onSavePatient={async () => {}} 
+              onDeletePatient={async () => {}}
+            />
+          )}
+          {view === 'workshop' && (
+            <WorkshopManagement 
+              orders={orders} 
+              onUpdateOrder={async () => {}} 
+            />
+          )}
+          {view === 'inventory' && (
+            <InventoryManagement 
+              items={inventory} 
+              onUpdateInventory={async () => {}} 
+            />
+          )}
           {view === 'ai_insights' && <AIAssistant />}
-          {view === 'workshop' && <WorkshopManagement orders={[]} onUpdateOrder={async () => {}} />}
         </div>
       </main>
     </div>
