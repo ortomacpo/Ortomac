@@ -1,9 +1,6 @@
-
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 
-// Mapeamento das chaves do Vercel para o Firebase
-// Priorizamos os nomes que você cadastrou (conforme imagem)
 const firebaseConfig = {
   apiKey: process.env.apiKey || process.env.FIREBASE_API_KEY || "",
   authDomain: process.env.authDomain || process.env.FIREBASE_AUTH_DOMAIN || "",
@@ -16,7 +13,6 @@ const firebaseConfig = {
 let db: any = null;
 let isFirebaseReady = false;
 
-// Verifica se as chaves mínimas estão presentes
 if (firebaseConfig.apiKey && firebaseConfig.projectId) {
   try {
     const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
@@ -32,12 +28,9 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
         }
       });
     }
-    console.log("🚀 Ortomac Cloud: Conectado com sucesso.");
   } catch (e) {
-    console.error("❌ Falha na conexão Cloud:", e);
+    console.error("Erro Firebase:", e);
   }
-} else {
-  console.warn("⚠️ Ortomac Cloud: Variáveis de ambiente não detectadas no Vercel.");
 }
 
 export { db, isFirebaseReady };

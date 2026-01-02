@@ -1,4 +1,3 @@
-
 export type AppView = 'dashboard' | 'patients' | 'workshop' | 'inventory' | 'ai_insights';
 
 export enum UserRole {
@@ -10,7 +9,14 @@ export enum UserRole {
 
 export interface User { id: string; name: string; email: string; role: UserRole; }
 
-// Added ScoliosisData interface for clinical records
+export interface ClinicalNote {
+  id: string;
+  date: string;
+  professional: string;
+  content: string;
+  type: string;
+}
+
 export interface ScoliosisData {
   main_complaint?: string;
   cobb_toracica?: number;
@@ -26,7 +32,7 @@ export interface Patient {
   last_visit: string;
   condition: string;
   categories: string[];
-  // Added optional clinical record fields
+  clinical_notes?: ClinicalNote[];
   scoliosis_record?: ScoliosisData;
   pending_physio_eval?: boolean;
 }
@@ -59,7 +65,6 @@ export interface InventoryItem {
   min_quantity: number;
 }
 
-// Added Appointment interface for CalendarView
 export interface Appointment {
   id: string;
   patient_id: string;
