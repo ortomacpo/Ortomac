@@ -21,9 +21,15 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (isFirebaseReady) {
-      const unsubPatients = subscribeToCollection('patients', setPatients);
-      const unsubOrders = subscribeToCollection('orders', setOrders);
-      const unsubInventory = subscribeToCollection('inventory', setInventory);
+      const unsubPatients = subscribeToCollection('patients', (data) => {
+        if (data.length > 0) setPatients(data);
+      });
+      const unsubOrders = subscribeToCollection('orders', (data) => {
+        if (data.length > 0) setOrders(data);
+      });
+      const unsubInventory = subscribeToCollection('inventory', (data) => {
+        if (data.length > 0) setInventory(data);
+      });
       return () => { unsubPatients(); unsubOrders(); unsubInventory(); };
     }
   }, []);

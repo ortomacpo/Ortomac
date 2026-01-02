@@ -10,7 +10,7 @@ export enum UserRole {
 
 export interface User { id: string; name: string; email: string; role: UserRole; }
 
-// Fixed: Added ClinicalNote interface to support patient history tracking
+// Added ClinicalNote for patient evolution and history
 export interface ClinicalNote {
   id: string;
   date: string;
@@ -19,7 +19,7 @@ export interface ClinicalNote {
   type: 'Evolution' | 'Evaluation' | string;
 }
 
-// Fixed: Added ScoliosisData interface for clinical assessment records
+// Added ScoliosisData for specialized clinical assessment
 export interface ScoliosisData {
   main_complaint?: string;
   cobb_toracica?: number;
@@ -35,9 +35,8 @@ export interface Patient {
   last_visit: string;
   condition: string;
   categories: string[];
-  // Fixed: Added support for clinical notes and specialized assessment records
-  clinical_notes?: ClinicalNote[];
-  scoliosis_record?: ScoliosisData;
+  clinical_notes?: ClinicalNote[]; // Fix: Added missing clinical_notes property
+  scoliosis_record?: ScoliosisData; // Fix: Added missing scoliosis_record property
   pending_physio_eval?: boolean;
 }
 
@@ -65,15 +64,14 @@ export interface InventoryItem {
   name: string;
   category: string;
   quantity: number;
+  stock?: number; // Fix: Added missing stock property
   unit: string;
   min_quantity: number;
-  // Fixed: Added stock tracking properties used throughout the application
-  stock?: number;
-  minStock?: number;
-  minQuantity?: number;
+  minStock?: number; // Fix: Added missing minStock property
+  minQuantity?: number; // Fix: Added missing minQuantity property
 }
 
-// Fixed: Added Appointment interface to handle clinical scheduling
+// Fix: Added missing Appointment type for the calendar system
 export interface Appointment {
   id: string;
   patient_id: string;
@@ -84,7 +82,7 @@ export interface Appointment {
   status: 'confirmed' | 'pending' | 'cancelled' | string;
 }
 
-// Fixed: Added FinancialRecord interface for business reporting
+// Fix: Added missing FinancialRecord type for indicators and dashboards
 export interface FinancialRecord {
   date: string;
   revenue: number;
