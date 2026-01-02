@@ -21,20 +21,24 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (isFirebaseReady) {
-      const unsubPatients = subscribeToCollection('patients', (data) => {
-        if (data && data.length > 0) setPatients(data);
-      });
-      const unsubOrders = subscribeToCollection('orders', (data) => {
-        if (data && data.length > 0) setOrders(data);
-      });
-      const unsubInventory = subscribeToCollection('inventory', (data) => {
-        if (data && data.length > 0) setInventory(data);
-      });
-      return () => { 
-        unsubPatients(); 
-        unsubOrders(); 
-        unsubInventory(); 
-      };
+      try {
+        const unsubPatients = subscribeToCollection('patients', (data) => {
+          if (data && data.length > 0) setPatients(data);
+        });
+        const unsubOrders = subscribeToCollection('orders', (data) => {
+          if (data && data.length > 0) setOrders(data);
+        });
+        const unsubInventory = subscribeToCollection('inventory', (data) => {
+          if (data && data.length > 0) setInventory(data);
+        });
+        return () => { 
+          unsubPatients(); 
+          unsubOrders(); 
+          unsubInventory(); 
+        };
+      } catch (err) {
+        console.error("Erro ao iniciar assinaturas do banco:", err);
+      }
     }
   }, []);
 
@@ -55,7 +59,7 @@ const App: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">{view}</h1>
-              {isFirebaseReady && <span className="bg-emerald-500 w-2 h-2 rounded-full animate-pulse" title="Conectado ao Cloud"></span>}
+              {isFirebaseReady && <span className="bg-emerald-500 w-2 h-2 rounded-full animate-pulse shadow-lg shadow-emerald-500/20" title="Cloud Ativo"></span>}
             </div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Painel OrtoPhysio Pro</p>
           </div>
