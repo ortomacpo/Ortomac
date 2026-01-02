@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Patient, UserRole } from '../types.ts';
 
 interface PatientManagementProps {
@@ -13,7 +13,7 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ patients }) => {
     <div className="space-y-6 animate-fadeIn">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {patients.map((patient) => (
-          <div key={patient.id} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+          <div key={patient.id} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-all">
             <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 font-black text-xl mb-6">
               {patient.name.charAt(0)}
             </div>

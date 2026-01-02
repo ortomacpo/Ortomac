@@ -15,17 +15,14 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ items, onUpda
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    // Added minQuantity to satisfy the InventoryItem interface requirements
+    // Fix: Cleaned up the object to only include properties defined in the InventoryItem interface
     const newItem: InventoryItem = {
       id: crypto.randomUUID(),
       name: formData.name,
       category: formData.category,
       quantity: Number(formData.quantity),
-      stock: Number(formData.quantity),
       unit: formData.unit,
       min_quantity: Number(formData.min_quantity),
-      minStock: Number(formData.min_quantity),
-      minQuantity: Number(formData.min_quantity)
     };
     await onUpdateInventory(newItem);
     setIsSaving(false);
@@ -59,14 +56,14 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ items, onUpda
               <tr key={item.id} className="hover:bg-slate-50/50 transition cursor-default group">
                 <td className="px-8 py-6 font-black text-slate-800 text-sm">{item.name}</td>
                 <td className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-wider">{item.category}</td>
-                <td className="px-8 py-6 font-black text-slate-700">{(item.quantity ?? item.stock)} {item.unit}</td>
+                <td className="px-8 py-6 font-black text-slate-700">{item.quantity} {item.unit}</td>
                 <td className="px-8 py-6">
                   <span className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border ${
-                    (item.quantity ?? item.stock ?? 0) <= (item.min_quantity ?? item.minStock ?? 0) 
+                    item.quantity <= item.min_quantity 
                     ? 'bg-rose-50 text-rose-600 border-rose-100' 
                     : 'bg-emerald-50 text-emerald-600 border-emerald-100'
                   }`}>
-                    {(item.quantity ?? item.stock ?? 0) <= (item.min_quantity ?? item.minStock ?? 0) ? 'Reposição Urgente' : 'Estoque Saudável'}
+                    {item.quantity <= item.min_quantity ? 'Reposição Urgente' : 'Estoque Saudável'}
                   </span>
                 </td>
               </tr>

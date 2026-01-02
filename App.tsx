@@ -82,7 +82,7 @@ const App: React.FC = () => {
           {view === 'inventory' && (
             <InventoryManagement 
               items={inventory} 
-              onUpdateInventory={async () => {}} 
+              onUpdateInventory={async (item) => {}} 
             />
           )}
           {view === 'ai_insights' && <AIAssistant />}

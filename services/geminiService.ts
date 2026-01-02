@@ -1,11 +1,13 @@
+
 import { GoogleGenAI } from "@google/genai";
 
 export const getGeminiAnalysis = async (prompt: string) => {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // Fix: Using correct parameter structure for generateContent and the recommended model
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: [{ parts: [{ text: prompt }] }],
+      contents: prompt,
       config: {
         systemInstruction: "Você é o Cérebro OrtoPhysio, especialista em reabilitação física e fabricação de órteses/próteses. Forneça respostas técnicas em português brasileiro.",
         temperature: 0.7,

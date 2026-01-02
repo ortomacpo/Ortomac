@@ -10,16 +10,7 @@ export enum UserRole {
 
 export interface User { id: string; name: string; email: string; role: UserRole; }
 
-// Added ClinicalNote for patient evolution and history
-export interface ClinicalNote {
-  id: string;
-  date: string;
-  professional: string;
-  content: string;
-  type: 'Evolution' | 'Evaluation' | string;
-}
-
-// Added ScoliosisData for specialized clinical assessment
+// Added ScoliosisData interface for clinical records
 export interface ScoliosisData {
   main_complaint?: string;
   cobb_toracica?: number;
@@ -35,8 +26,8 @@ export interface Patient {
   last_visit: string;
   condition: string;
   categories: string[];
-  clinical_notes?: ClinicalNote[]; // Fix: Added missing clinical_notes property
-  scoliosis_record?: ScoliosisData; // Fix: Added missing scoliosis_record property
+  // Added optional clinical record fields
+  scoliosis_record?: ScoliosisData;
   pending_physio_eval?: boolean;
 }
 
@@ -64,27 +55,17 @@ export interface InventoryItem {
   name: string;
   category: string;
   quantity: number;
-  stock?: number; // Fix: Added missing stock property
   unit: string;
   min_quantity: number;
-  minStock?: number; // Fix: Added missing minStock property
-  minQuantity?: number; // Fix: Added missing minQuantity property
 }
 
-// Fix: Added missing Appointment type for the calendar system
+// Added Appointment interface for CalendarView
 export interface Appointment {
   id: string;
   patient_id: string;
   patient_name: string;
   time: string;
   appointment_date: string;
-  type: 'Physio' | 'Workshop' | string;
-  status: 'confirmed' | 'pending' | 'cancelled' | string;
-}
-
-// Fix: Added missing FinancialRecord type for indicators and dashboards
-export interface FinancialRecord {
-  date: string;
-  revenue: number;
-  expenses: number;
+  type: 'Physio' | 'Workshop';
+  status: string;
 }
